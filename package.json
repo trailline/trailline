@@ -1,0 +1,22 @@
+{
+  "name": "trailline",
+  "version": "0.0.1",
+  "description": "Capture and replay user interaction trails for web applications",
+  "main": "index.js",
+  "bin": {
+    "trailline": "./index.js"
+  },
+  "keywords": [
+    "trailline",
+    "user-interaction",
+    "session-replay",
+    "developer-tools",
+    "debugging"
+  ],
+  "author": "Varun Jain <varunjainvj1@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trailline/trailline"
+  }
+}
