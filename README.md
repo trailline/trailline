@@ -23,4 +23,4 @@ npx trailline sql report.html     # compose the report into one SQL script
 
 ## License
 
-MIT © Varun Jain
+Apache-2.0 © Varun Jain
