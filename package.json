@@ -1,22 +1,50 @@
 {
   "name": "trailline",
   "version": "0.0.1",
-  "description": "Capture and replay user interaction trails for web applications",
+  "description": "A provenance layer for AI-generated reports — every number, chart, and claim traces back to the query that produced it.",
+  "type": "module",
   "main": "index.js",
   "bin": {
-    "trailline": "./index.js"
+    "trailline": "index.js"
+  },
+  "files": [
+    "index.js"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "start": "node index.js"
   },
   "keywords": [
     "trailline",
-    "user-interaction",
-    "session-replay",
-    "developer-tools",
-    "debugging"
+    "provenance",
+    "lineage",
+    "data-lineage",
+    "sql",
+    "reporting",
+    "analytics",
+    "ai"
   ],
   "author": "Varun Jain <varunjainvj1@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/trailline/trailline"
+    "url": "git+https://github.com/trailline/trailline.git"
+  },
+  "bugs": {
+    "url": "https://github.com/trailline/trailline/issues"
+  },
+  "homepage": "https://github.com/trailline/trailline#readme",
+  "devDependencies": {
+    "@commitlint/cli": "^19.6.1",
+    "@commitlint/config-conventional": "^19.6.0",
+    "@eslint/js": "^9.17.0",
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.2"
   }
 }
