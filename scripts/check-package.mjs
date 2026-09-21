@@ -7,7 +7,7 @@
  * runs in CI so that failure is loud and early.
  */
 import { execFileSync } from "node:child_process";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -43,6 +43,8 @@ try {
   console.error("Could not run `npm pack --dry-run`:");
   console.error((error.stdout || error.stderr || error.message).trim());
   process.exit(1);
+} finally {
+  rmSync(cache, { recursive: true, force: true });
 }
 
 const [tarball] = JSON.parse(raw);
