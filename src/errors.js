@@ -31,10 +31,8 @@ export class TraillineError extends Error {
 
 /** A command whose surface is fixed but whose body is not built yet. */
 export class NotImplementedError extends TraillineError {
-  constructor(command, milestone) {
-    super(
-      `\`trailline ${command}\` is not implemented yet (planned for ${milestone}).`,
-    );
+  constructor(command) {
+    super(`\`trailline ${command}\` is not implemented yet.`);
     this.name = "NotImplementedError";
     this.command = command;
   }

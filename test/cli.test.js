@@ -7,7 +7,7 @@ import { packageMeta } from "../src/meta.js";
 import { runCli } from "./helpers.js";
 
 describe("command registry", () => {
-  it("exposes the four MVP commands", () => {
+  it("exposes the four commands", () => {
     assert.deepEqual(
       commands.map((c) => c.name),
       ["source", "check", "view", "sql"],

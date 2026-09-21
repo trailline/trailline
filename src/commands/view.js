@@ -23,5 +23,5 @@ export const options = {
 };
 
 export async function run(_parsed) {
-  throw new NotImplementedError(name, "M5");
+  throw new NotImplementedError(name);
 }
