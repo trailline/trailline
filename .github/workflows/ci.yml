@@ -43,8 +43,8 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci
-      - name: CLI smoke test
-        run: node index.js
+      - name: Tests
+        run: npm test
 
   package:
     name: npm pack check
@@ -56,5 +56,12 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - name: Verify package publishes cleanly
-        run: npm pack --dry-run
+      - name: Verify the tarball contains the CLI
+        run: npm run check:package
+
+      - name: Install the tarball and run the binary
+        run: |
+          npm pack --pack-destination "$RUNNER_TEMP"
+          npm install --global "$RUNNER_TEMP"/trailline-*.tgz
+          trailline --version
+          trailline --help

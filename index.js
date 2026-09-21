@@ -1,4 +1,4 @@
 #!/usr/bin/env node
+import { main } from "./src/cli.js";
 
-console.log("trailline - coming soon");
-console.log("https://github.com/trailline/trailline");
+process.exitCode = await main();

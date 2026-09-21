@@ -8,16 +8,19 @@
     "trailline": "index.js"
   },
   "files": [
-    "index.js"
+    "index.js",
+    "src/"
   ],
   "engines": {
     "node": ">=18"
   },
   "scripts": {
+    "test": "node --test test/*.test.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "check:package": "node scripts/check-package.mjs",
     "start": "node index.js"
   },
   "keywords": [

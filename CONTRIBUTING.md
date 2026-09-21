@@ -11,10 +11,35 @@ Node 18+ is required (CI runs on 18, 20, and 22).
 ## Before you push
 
 ```bash
+npm test              # node:test, run as CI runs it
 npm run lint          # ESLint
 npm run format        # Prettier (write)
 npm run format:check  # Prettier (verify only, as CI runs it)
+npm run check:package # Assert the tarball still contains the CLI
 ```
+
+## Repo layout
+
+```
+index.js              Executable shim; everything real lives in src/
+src/cli.js            Argument dispatch and exit-code handling
+src/commands/         One module per command: source, check, view, sql
+test/                 node:test suites and report fixtures
+scripts/              Repo maintenance, not shipped
+```
+
+Two rules hold the shape:
+
+- **Runtime dependencies are capped at two.** Everything else comes from the
+  standard library. A new dependency is a discussion, not a commit.
+- **`files` in `package.json` is an allowlist.** New shipped directories must
+  be added there, and `npm run check:package` fails loudly when they are not.
+
+## Command surface
+
+Each command module exports `name`, `summary`, `usage`, `options` (a
+`node:util` `parseArgs` config) and `run`. Exit codes are part of the
+contract: `0` did the job, `1` ran but failed, `2` was invoked wrongly.
 
 ## Conventions
 
