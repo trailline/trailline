@@ -1,0 +1,13 @@
+{
+  "tool": "mcp__snowflake__run_query",
+  "captured_at": "2026-09-18T10:02:11Z",
+  "sql": "-- New customers and spend by channel, August 2026\nSELECT\n  channel,\n  signup_month,\n  new_customers,\n  spend\nFROM marts.acquisition_by_channel\nWHERE signup_month BETWEEN '2026-08-01' AND '2026-08-31';",
+  "columns": ["channel", "signup_month", "new_customers", "spend"],
+  "rows": {
+    "channel": ["paid_search", "paid_social", "organic", "referral"],
+    "signup_month": ["2026-08-01", "2026-08-01", "2026-08-01", "2026-08-01"],
+    "new_customers": [1240, 1810, 2260, 640],
+    "spend": [75888.0, 88690.0, 0.0, 12800.0]
+  },
+  "row_count": 4
+}

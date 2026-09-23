@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>August retention by channel</title>
+  <meta name="trailline" content="1.0">
+  <style>
+    :root { --ink: #1d2128; --muted: #5f6570; --line: #e4e6ea; --accent: #2a6fdb; }
+    body { margin: 0; background: #fff; color: var(--ink); font: 16px/1.55 -apple-system, "Segoe UI", Roboto, sans-serif; }
+    main { max-width: 760px; margin: 0 auto; padding: 40px 20px 64px; }
+    .eyebrow { margin: 0; color: var(--muted); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
+    h1 { margin: 6px 0 4px; font-size: 30px; line-height: 1.2; }
+    .subtitle { margin: 0 0 28px; color: var(--muted); }
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 28px; }
+    .kpi { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+    .kpi-label { color: var(--muted); font-size: 13px; }
+    .kpi-value { font-size: 26px; font-weight: 600; }
+    .kpi-note { color: var(--muted); font-size: 13px; }
+    h2 { margin: 32px 0 8px; font-size: 18px; }
+    figure { margin: 0; }
+    svg { width: 100%; height: auto; }
+    svg .grid { stroke: var(--line); }
+    svg .tick { fill: var(--muted); font-size: 11px; }
+    svg .series { font-size: 12px; }
+    table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: right; }
+    th:first-child, td:first-child { text-align: left; }
+    th { color: var(--muted); font-weight: 500; font-size: 13px; }
+    footer { margin-top: 40px; color: var(--muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">Growth review · August 2026</p>
+    <h1 data-trailline="i1"><span data-trailline="f6">Paid social</span> led August retention</h1>
+    <p class="subtitle">30-day retention by acquisition channel, cohorts from January to August 2026</p>
+  </header>
+
+  <section class="kpis">
+    <div class="kpi">
+      <div class="kpi-label">Paid social retention, August</div>
+      <div class="kpi-value" data-trailline="f1">46.6%</div>
+      <div class="kpi-note">vs <span data-trailline="f2">41.7%</span> in July</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Change on July</div>
+      <div class="kpi-value" data-trailline="f3">11.8%</div>
+      <div class="kpi-note">relative change</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Share of August new customers</div>
+      <div class="kpi-value" data-trailline="f5">31.2%</div>
+      <div class="kpi-note">paid social</div>
+    </div>
+  </section>
+
+  <p data-trailline="i2">Paid social 30-day retention rose to <span data-trailline="f1">46.6%</span> in August, up <span data-trailline="f3">11.8%</span> on July's <span data-trailline="f2">41.7%</span>, and ranked <span data-trailline="f4">#1</span> of the four channels.</p>
+
+  <p data-trailline="i3">Paid social brought in <span data-trailline="f5">31.2%</span> of August's new customers, so its gain lifts retention across the whole base, not just one corner of it.</p>
+
+  <h2>Retention by channel, month by month</h2>
+  <figure data-trailline="v1">
+    <svg viewBox="0 0 640 260" role="img" aria-label="30-day retention by channel, January to August 2026">
+      <line class="grid" x1="44" x2="544" y1="232.0" y2="232.0"/>
+      <text class="tick" x="36" y="236.0" text-anchor="end">36%</text>
+      <line class="grid" x1="44" x2="544" y1="160.0" y2="160.0"/>
+      <text class="tick" x="36" y="164.0" text-anchor="end">40%</text>
+      <line class="grid" x1="44" x2="544" y1="88.0" y2="88.0"/>
+      <text class="tick" x="36" y="92.0" text-anchor="end">44%</text>
+      <line class="grid" x1="44" x2="544" y1="16.0" y2="16.0"/>
+      <text class="tick" x="36" y="20.0" text-anchor="end">48%</text>
+      <text class="tick" x="44.0" y="252" text-anchor="middle">Jan</text>
+      <text class="tick" x="115.4" y="252" text-anchor="middle">Feb</text>
+      <text class="tick" x="186.9" y="252" text-anchor="middle">Mar</text>
+      <text class="tick" x="258.3" y="252" text-anchor="middle">Apr</text>
+      <text class="tick" x="329.7" y="252" text-anchor="middle">May</text>
+      <text class="tick" x="401.1" y="252" text-anchor="middle">Jun</text>
+      <text class="tick" x="472.6" y="252" text-anchor="middle">Jul</text>
+      <text class="tick" x="544.0" y="252" text-anchor="middle">Aug</text>
+      <polyline fill="none" stroke="#d8dadf" stroke-width="1.5" points="44.0,196.0 115.4,188.8 186.9,179.8 258.3,185.2 329.7,176.2 401.1,172.6 472.6,174.4 544.0,181.6"/>
+      <text class="series" x="552" y="185.6" fill="#9a9ea6">paid search</text>
+      <polyline fill="none" stroke="#b5b9c0" stroke-width="1.5" points="44.0,115.0 115.4,109.6 186.9,106.0 258.3,113.2 329.7,100.6 401.1,107.8 472.6,109.6 544.0,104.2"/>
+      <text class="series" x="552" y="108.2" fill="#b5b9c0">organic</text>
+      <polyline fill="none" stroke="#8a8f98" stroke-width="1.5" points="44.0,73.6 115.4,68.2 186.9,61.0 258.3,71.8 329.7,55.6 401.1,66.4 472.6,61.0 544.0,66.4"/>
+      <text class="series" x="552" y="70.4" fill="#8a8f98">referral</text>
+      <polyline fill="none" stroke="#2a6fdb" stroke-width="2.5" points="44.0,174.4 115.4,163.6 186.9,151.0 258.3,158.2 329.7,142.0 401.1,143.8 472.6,129.4 544.0,41.2"/>
+      <text class="series" x="552" y="45.2" fill="#2a6fdb">paid social</text>
+    </svg>
+  </figure>
+
+  <h2>August by channel</h2>
+  <table data-trailline="v2">
+    <thead>
+      <tr><th>Channel</th><th>New customers</th><th>30-day retention</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Paid social</td><td>4,120</td><td>46.6%</td></tr>
+      <tr><td>Referral</td><td>1,900</td><td>45.2%</td></tr>
+      <tr><td>Organic</td><td>3,870</td><td>43.1%</td></tr>
+      <tr><td>Paid search</td><td>3,310</td><td>38.8%</td></tr>
+    </tbody>
+  </table>
+
+  <footer>Source: marts.retention_by_channel and marts.acquisition_by_channel. Retention is the 30-day active rate of each signup cohort: customers still active a month after signup, over customers in the cohort.</footer>
+</main>
+<script type="application/trailline+json" id="trailline-graph">{
+  "trailline": "1.0",
+  "report_id": "0192b3a4-7c1e-7a8f-9d2e-4b1c6f8a9e01",
+  "built_at": "2026-09-16T14:20:00Z",
+  "builder_tool": "claude-code",
+  "nodes": {
+    "q1": {
+      "step": "source",
+      "kind": "sql",
+      "how": "captured",
+      "mart": "marts.retention_by_channel",
+      "period": {
+        "from": "2026-01-01",
+        "to": "2026-08-31"
+      },
+      "sql": "-- 30-day retention inputs by channel, region and cohort month, Jan to Aug 2026\nselect\n    channel,\n    region,\n    cohort_month,\n    cohort_customers,\n    retained_30d\nfrom marts.retention_by_channel\nwhere cohort_month between '2026-01-01' and '2026-08-31'",
+      "columns": [
+        "channel",
+        "region",
+        "cohort_month",
+        "cohort_customers",
+        "retained_30d"
+      ],
+      "rows": null
+    },
+    "q2": {
+      "step": "source",
+      "kind": "sql",
+      "how": "captured",
+      "mart": "marts.acquisition_by_channel",
+      "period": {
+        "from": "2026-08-01",
+        "to": "2026-08-31"
+      },
+      "sql": "-- New customers by channel, August 2026\nselect\n    channel,\n    signup_month,\n    new_customers\nfrom marts.acquisition_by_channel\nwhere signup_month between '2026-08-01' and '2026-08-31'",
+      "columns": [
+        "channel",
+        "signup_month",
+        "new_customers"
+      ],
+      "rows": {
+        "channel": [
+          "paid_social",
+          "paid_search",
+          "organic",
+          "referral"
+        ],
+        "signup_month": [
+          "2026-08-01",
+          "2026-08-01",
+          "2026-08-01",
+          "2026-08-01"
+        ],
+        "new_customers": [
+          4120,
+          3310,
+          3870,
+          1900
+        ]
+      }
+    },
+    "v1": {
+      "step": "view",
+      "from": [
+        "q1"
+      ],
+      "sql": "-- Monthly 30-day retention by channel, with each channel's rank in its month\nselect\n    channel,\n    cohort_month,\n    sum(retained_30d) / sum(cohort_customers) as retention,\n    rank() over (\n        partition by cohort_month\n        order by sum(retained_30d) / sum(cohort_customers) desc\n    ) as retention_rank\nfrom q1\ngroup by channel, cohort_month",
+      "columns": [
+        "channel",
+        "cohort_month",
+        "retention",
+        "retention_rank"
+      ],
+      "encoding": {
+        "x": "cohort_month",
+        "y": "retention",
+        "series": "channel",
+        "visual": "line"
+      },
+      "rows": null
+    },
+    "v2": {
+      "step": "view",
+      "from": [
+        "q1",
+        "q2"
+      ],
+      "sql": "-- August new customers and 30-day retention by channel\nselect\n    q2.channel,\n    q2.new_customers,\n    sum(q1.retained_30d) / sum(q1.cohort_customers) as retention\nfrom q2\njoin q1\n    on q1.channel = q2.channel\n    and q1.cohort_month = q2.signup_month\ngroup by q2.channel, q2.new_customers\norder by retention desc",
+      "columns": [
+        "channel",
+        "new_customers",
+        "retention"
+      ],
+      "encoding": {
+        "visual": "table"
+      },
+      "rows": null
+    },
+    "f1": {
+      "step": "figure",
+      "from": [
+        "v1"
+      ],
+      "sql": "select retention\nfrom v1\nwhere channel = 'paid_social'\n  and cohort_month = '2026-08-01'",
+      "value": 0.466,
+      "display": "46.6%",
+      "label": "Paid social retention, August"
+    },
+    "f2": {
+      "step": "figure",
+      "from": [
+        "v1"
+      ],
+      "sql": "select retention\nfrom v1\nwhere channel = 'paid_social'\n  and cohort_month = '2026-07-01'",
+      "value": 0.417,
+      "display": "41.7%",
+      "label": "Paid social retention, July"
+    },
+    "f3": {
+      "step": "figure",
+      "from": [
+        "f1",
+        "f2"
+      ],
+      "expr": "(f1 - f2) / f2",
+      "value": 0.1175,
+      "display": "11.8%",
+      "label": "Change in paid social retention, August vs July"
+    },
+    "f4": {
+      "step": "figure",
+      "from": [
+        "v1"
+      ],
+      "sql": "select retention_rank\nfrom v1\nwhere channel = 'paid_social'\n  and cohort_month = '2026-08-01'",
+      "value": 1,
+      "display": "#1",
+      "label": "Paid social's retention rank among channels, August"
+    },
+    "f5": {
+      "step": "figure",
+      "from": [
+        "v2"
+      ],
+      "sql": "select customer_share\nfrom (\n    select\n        channel,\n        new_customers / sum(new_customers) over () as customer_share\n    from v2\n) as shares\nwhere channel = 'paid_social'",
+      "value": 0.3121,
+      "display": "31.2%",
+      "label": "Paid social share of August new customers"
+    },
+    "f6": {
+      "step": "figure",
+      "from": [
+        "v2"
+      ],
+      "sql": "select channel\nfrom v2\norder by retention desc\nlimit 1",
+      "value": "paid_social",
+      "display": "Paid social",
+      "label": "Channel with the highest August retention"
+    },
+    "i1": {
+      "step": "insight",
+      "from": [
+        "f6"
+      ],
+      "text": "Paid social led August retention."
+    },
+    "i2": {
+      "step": "insight",
+      "from": [
+        "f1",
+        "f2",
+        "f3",
+        "f4"
+      ],
+      "text": "Paid social 30-day retention rose to 46.6% in August, up 11.8% on July's 41.7%, and ranked #1 of the four channels."
+    },
+    "i3": {
+      "step": "insight",
+      "from": [
+        "f5",
+        "i2"
+      ],
+      "text": "Paid social brought in 31.2% of August's new customers, so its gain lifts retention across the whole base, not just one corner of it."
+    }
+  }
+}</script>
+</body>
+</html>

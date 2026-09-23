@@ -1,0 +1,10 @@
+{
+  "tool": "mcp__snowflake__run_query",
+  "captured_at": "2026-09-18T10:00:47Z",
+  "sql": "select distinct channel from marts.acquisition_by_channel",
+  "columns": ["channel"],
+  "rows": {
+    "channel": ["paid_search", "paid_social", "organic", "referral"]
+  },
+  "row_count": 4
+}

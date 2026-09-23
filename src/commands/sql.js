@@ -10,8 +10,9 @@ single script a reviewer can paste into the warehouse. External and
 ungrounded nodes are listed as trailing comments.
 
 Options
-  --graph <path>   Graph JSON to read (default: the block embedded in the
-                   report, else .trailline/graph.json)
+  --graph <path>   Graph JSON to read (default: .trailline/<report>.json
+                   beside the report, or else the block already embedded
+                   in it)
   --out <path>     Write to a file instead of standard output
   -h, --help       Show this help`;
 

@@ -1,0 +1,93 @@
+{
+  "trailline": "1.0",
+  "builder_tool": "cursor",
+  "nodes": {
+    "q1": {
+      "step": "source",
+      "kind": "sql",
+      "how": "reported",
+      "mart": "marts.subscription_churn",
+      "period": { "from": "2026-07-01", "to": "2026-08-31" },
+      "sql": "-- Monthly churn by plan, July and August 2026\nselect\n    plan,\n    churn_month,\n    active_start,\n    churned\nfrom marts.subscription_churn\nwhere churn_month between '2026-07-01' and '2026-08-31'",
+      "columns": ["plan", "churn_month", "active_start", "churned"]
+    },
+    "v1": {
+      "step": "view",
+      "from": ["q1"],
+      "sql": "-- Churn rate by plan, August 2026\nselect\n    plan,\n    churned / active_start as churn_rate\nfrom q1\nwhere churn_month = '2026-08-01'",
+      "columns": ["plan", "churn_rate"],
+      "encoding": { "visual": "table" }
+    },
+    "v2": {
+      "step": "view",
+      "from": ["q1"],
+      "sql": "-- Churn rate by plan, July 2026\nselect\n    plan,\n    churned / active_start as churn_rate\nfrom q1\nwhere churn_month = '2026-07-01'",
+      "columns": ["plan", "churn_rate"]
+    },
+    "f1": {
+      "step": "figure",
+      "from": ["v1"],
+      "sql": "select churn_rate\nfrom v1\nwhere plan = 'monthly'",
+      "value": 0.048,
+      "display": "4.8%",
+      "label": "Monthly plan churn, August"
+    },
+    "f2": {
+      "step": "figure",
+      "from": ["v1"],
+      "sql": "select churn_rate\nfrom v1\nwhere plan = 'annual'",
+      "expr": "f1 / 3",
+      "value": 0.016,
+      "display": "1.6%",
+      "label": "Annual plan churn, August"
+    },
+    "f3": {
+      "step": "figure",
+      "from": ["f4"],
+      "expr": "f4 + 1",
+      "value": 3,
+      "display": "3",
+      "label": "Churned plans, adjusted"
+    },
+    "f4": {
+      "step": "figure",
+      "from": ["f3"],
+      "expr": "f3 * 2",
+      "value": 2,
+      "display": "2",
+      "label": "Churned plans, doubled"
+    },
+    "f5": {
+      "step": "figure",
+      "from": ["f1"],
+      "expr": "f1 ^ 2",
+      "value": 0.0023,
+      "display": "0.23%",
+      "label": "Monthly churn, squared"
+    },
+    "i1": {
+      "step": "insight",
+      "from": [],
+      "text": "Monthly subscribers are the churn problem."
+    },
+    "i2": {
+      "step": "insight",
+      "from": ["v1"],
+      "text": "Every plan churned less in August than it did in July."
+    },
+    "i3": {
+      "step": "insight",
+      "from": ["f1"]
+    },
+    "Top-Plan": {
+      "step": "insight",
+      "from": ["f1"],
+      "text": "The monthly plan churns most."
+    },
+    "m1": {
+      "step": "metric",
+      "from": ["v1"],
+      "value": 0.048
+    }
+  }
+}

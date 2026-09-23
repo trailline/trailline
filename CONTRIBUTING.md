@@ -24,7 +24,8 @@ npm run check:package # Assert the tarball still contains the CLI
 index.js              Executable shim; everything real lives in src/
 src/cli.js            Argument dispatch and exit-code handling
 src/commands/         One module per command: source, check, view, sql
-test/                 node:test suites and report fixtures
+src/graph/            The file format: schema, expressions, reading the graph
+test/                 node:test suites; test/fixtures/ holds the format contract
 scripts/              Repo maintenance, not shipped
 ```
 

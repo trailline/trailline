@@ -1,0 +1,10 @@
+{
+  "report": "august-retention.html",
+  "origin": "embedded",
+  "issues": [],
+  "notes": [
+    "Nothing fires, including warnings. This is the shape a finished, forwarded report has.",
+    "C2 must not fire on: the year in 'August 2026', the '30-day' qualifier in the subtitle, i2 and the footer (see src/graph/numbers.js), or any number inside the view-bound chart (v1) and table (v2).",
+    "f4 picks a rank column from a view; f5 uses the subquery form for a share; f6 has a string value."
+  ]
+}
