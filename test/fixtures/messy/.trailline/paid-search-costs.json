@@ -1,0 +1,105 @@
+{
+  "trailline": "1.0",
+  "builder_tool": "claude-code",
+  "nodes": {
+    "q1": {
+      "step": "source",
+      "kind": "sql",
+      "mart": "marts.acquisition_by_channel",
+      "period": { "from": "2026-08-01", "to": "2026-08-31" },
+      "sql": "-- New customers and spend by channel, August 2026\nselect\n    channel,\n    signup_month,\n    new_customers,\n    spend\nfrom marts.acquisition_by_channel\nwhere signup_month between '2026-08-01' and '2026-08-31'",
+      "columns": ["channel", "signup_month", "new_customers", "spend"]
+    },
+    "q2": {
+      "step": "source",
+      "kind": "sql",
+      "mart": "marts.web_sessions",
+      "period": { "from": "2026-08-01", "to": "2026-08-31" },
+      "sql": "-- Site sessions over the last 30 days\nselect\n    count(session_id) as sessions\nfrom marts.web_sessions\nwhere session_date >= dateadd('day', -30, current_date)"
+    },
+    "t1": {
+      "step": "source",
+      "kind": "external",
+      "type": "csv",
+      "ref": "q3-targets.csv",
+      "given": "A CSV of Q3 cost-per-customer targets by channel, shared by the builder",
+      "columns": ["channel", "target_cost_per_customer"]
+    },
+    "v1": {
+      "step": "view",
+      "from": ["q1"],
+      "sql": "-- August new customers, spend and cost per new customer by channel\nselect\n    channel,\n    new_customers,\n    spend,\n    spend / new_customers as cost_per_customer\nfrom q1\norder by cost_per_customer desc",
+      "columns": ["channel", "new_customers", "spend", "cost_per_customer"],
+      "encoding": { "visual": "table" },
+      "notes": "Spend is media spend only, excludes agency fees."
+    },
+    "v2": {
+      "step": "view",
+      "from": ["v1"],
+      "sql": "SELECT c.channel, c.cost_per_customer FROM v1 c ORDER BY 2 DESC",
+      "columns": ["channel", "cost_per_customer"],
+      "encoding": { "x": "channel", "y": "cost_per_customer", "visual": "bar" }
+    },
+    "v3": {
+      "step": "view",
+      "from": ["v2"],
+      "sql": "-- Paid channels only\nselect\n    channel,\n    cost_per_customer\nfrom v2\nwhere channel in ('paid_search', 'paid_social')",
+      "columns": ["channel", "cost_per_customer"],
+      "encoding": { "visual": "table" }
+    },
+    "f1": {
+      "step": "figure",
+      "from": ["v1"],
+      "sql": "select cost_per_customer\nfrom v1\nwhere channel = 'paid_search'",
+      "value": 61.2,
+      "display": "$61.20",
+      "label": "Paid search cost per new customer, August"
+    },
+    "f2": {
+      "step": "figure",
+      "from": ["t1"],
+      "sql": "select target_cost_per_customer\nfrom t1\nwhere channel = 'paid_search'",
+      "value": 55,
+      "display": "$55.00"
+    },
+    "f3": {
+      "step": "figure",
+      "from": ["f1", "f2"],
+      "expr": "(f1 - f2) / f2",
+      "value": 0.1127,
+      "display": "11.3%",
+      "label": "Paid search cost over target, August"
+    },
+    "f4": {
+      "step": "figure",
+      "from": ["q2"],
+      "sql": "select sessions\nfrom q2",
+      "value": 48210,
+      "display": "48,210",
+      "label": "Site sessions, last 30 days"
+    },
+    "i1": {
+      "step": "insight",
+      "from": ["f1", "f2", "f3"],
+      "text": "Paid search cost $61.20 per new customer in August, 11.3% over the $55.00 target."
+    },
+    "i2": {
+      "step": "insight",
+      "from": [],
+      "ungrounded": true,
+      "text": "Industry benchmarks put paid search cost per customer around $50."
+    },
+    "i3": {
+      "step": "insight",
+      "from": [],
+      "ungrounded": true,
+      "text": "Creative fatigue on the summer campaign is the likely driver."
+    },
+    "i4": {
+      "step": "insight",
+      "from": [],
+      "ungrounded": true,
+      "text": "Costs should ease in September once the new creative is live."
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "report": "paid-search-costs.html",
+  "origin": "sidecar",
+  "issues": [
+    { "code": "S5", "severity": "warning", "node": "v1", "note": "unknown field `notes`" },
+    { "code": "S6", "severity": "warning", "node": "t1", "note": "external source should start with x" },
+    { "code": "S7", "severity": "warning", "node": "f2", "note": "no `label`" },
+    { "code": "C2", "severity": "warning", "node": "i1", "note": "bare '1,240' in prose; the '$50' in ungrounded i2 is allowed" },
+    { "code": "C3", "severity": "warning", "node": "f1", "note": "display $61.20, page shows $58.90 twice" },
+    { "code": "C7", "severity": "warning", "node": "q2", "note": "no `columns`, period not in the SQL as literals, uses dateadd/current_date. Reported once, as C7, not again as C8" },
+    { "code": "C8", "severity": "warning", "node": "v2", "note": "uppercase keywords, alias `c`, clauses on one line, ORDER BY position, no comment" },
+    { "code": "C11", "severity": "warning", "node": null, "note": "3 of 11 bound nodes ungrounded (i2, i3, i4), 27%" },
+    { "code": "C12", "severity": "warning", "node": null, "note": "captured/2.json matches no source" },
+    { "code": "C13", "severity": "warning", "node": "v3", "note": "v3 <- v2 <- v1 <- q1" }
+  ],
+  "notes": [
+    "No errors. Every warning rule fires once.",
+    "q1 matches captured/1.json after normalising (whitespace, case, trailing semicolon), so it becomes how: captured.",
+    "q2 matches no capture, so it becomes how: reported. That is not a warning.",
+    "t1 is external: listed under 'needs attention', not a warning."
+  ]
+}

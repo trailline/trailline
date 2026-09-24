@@ -12,8 +12,9 @@ database, no credentials, no network.
 Options
   --port <number>  Port to serve on (default: the first free port from 7171)
   --no-open        Print the URL instead of opening a browser
-  --graph <path>   Graph JSON to read (default: the block embedded in the
-                   report, else .trailline/graph.json)
+  --graph <path>   Graph JSON to read (default: .trailline/<report>.json
+                   beside the report, or else the block already embedded
+                   in it)
   -h, --help       Show this help`;
 
 export const options = {

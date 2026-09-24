@@ -3,7 +3,7 @@ import { NotImplementedError } from "../errors.js";
 export const name = "source";
 export const summary = "Register one source in the lineage graph";
 
-export const usage = `trailline source --id <id> [options]
+export const usage = `trailline source --report <report.html> --id <id> [options]
 
 Writes one source node into the graph file. This is the registration path
 for surfaces without a capture hook. In Claude Code the hook captures
@@ -23,7 +23,10 @@ External source
   --given <text>       What the model was handed, in words
 
 Common
-  --graph <path>       Graph JSON to write (default: .trailline/graph.json)
+  --report <path>      The report this source belongs to. The source is
+                       written to .trailline/<report>.json beside it; the
+                       report itself need not exist yet
+  --graph <path>       Graph JSON to write instead of the report's default
   --force              Overwrite an existing node with this id
   -h, --help           Show this help`;
 
@@ -36,6 +39,7 @@ export const options = {
   type: { type: "string" },
   ref: { type: "string" },
   given: { type: "string" },
+  report: { type: "string" },
   graph: { type: "string" },
   force: { type: "boolean", default: false },
 };

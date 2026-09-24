@@ -1,0 +1,21 @@
+{
+  "report": "churn-drivers.html",
+  "origin": "sidecar",
+  "issues": [
+    { "code": "S2", "severity": "error", "node": "Top-Plan", "note": "not a lowercase identifier" },
+    { "code": "S3", "severity": "error", "node": "m1", "note": "unknown step 'metric'" },
+    { "code": "S4", "severity": "error", "node": "i3", "note": "insight has no `text`" },
+    { "code": "S8", "severity": "error", "node": "f5", "note": "`^` is not in the expression language" },
+    { "code": "C4", "severity": "error", "node": "i1", "note": "empty `from`, not marked ungrounded" },
+    { "code": "C9", "severity": "error", "node": "f2", "note": "has both `sql` and `expr`" },
+    { "code": "C1", "severity": "error", "node": "f9", "note": "data-trailline=\"f9\" resolves to no node" },
+    { "code": "C1", "severity": "error", "node": "v2", "note": "view is bound to nothing on the page" },
+    { "code": "C5", "severity": "error", "node": "i2", "note": "an insight cannot rest on a view" },
+    { "code": "C6", "severity": "error", "node": "f3", "note": "cycle f3 -> f4 -> f3; reported once, on the first id in the cycle" }
+  ],
+  "notes": [
+    "Every error rule fires. No warnings fire.",
+    "C5 is not reported again on f2 (already C9) or f5 (already S8): a node whose shape is unreadable is not checked for chain shape.",
+    "m1 has an unknown step, so C1 does not require it to be bound."
+  ]
+}

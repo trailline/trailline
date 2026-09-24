@@ -12,8 +12,9 @@ Exit code is 0 when the report passes (warnings still pass) and 1 when it
 does not.
 
 Options
-  --graph <path>   Graph JSON to read (default: .trailline/graph.json, or the
-                   block already embedded in the report)
+  --graph <path>   Graph JSON to read (default: .trailline/<report>.json
+                   beside the report, or else the block already embedded
+                   in it)
   --no-embed       Check only; leave the report file untouched
   --json           Print the summary as JSON instead of prose
   --quiet          Print nothing; rely on the exit code
