@@ -33,6 +33,9 @@ export function sidecarPath(reportPath) {
 }
 
 const OPEN_SCRIPT = /<script\b[^>]*>/gi;
+// HTML ends a script element only at `</script` followed by whitespace, `/`,
+// `>` or the end of input, so `</scripture>` inside the JSON does not close it.
+const CLOSE_SCRIPT = /<\/script(?=[\s/>]|$)/gi;
 const TYPE_ATTR =
   /\stype\s*=\s*(["']?)application\/trailline\+json\1(?=[\s/>]|$)/i;
 
@@ -45,11 +48,11 @@ const TYPE_ATTR =
  */
 export function findEmbeddedGraph(html) {
   const blocks = [];
-  const lower = html.toLowerCase();
   for (const match of html.matchAll(OPEN_SCRIPT)) {
     if (!TYPE_ATTR.test(match[0])) continue;
     const contentStart = match.index + match[0].length;
-    const contentEnd = lower.indexOf("</script", contentStart);
+    CLOSE_SCRIPT.lastIndex = contentStart;
+    const contentEnd = CLOSE_SCRIPT.exec(html)?.index ?? -1;
     if (contentEnd === -1) {
       throw new TraillineError(
         `the embedded lineage graph at ${lineCol(html, match.index)} is never closed with </script>`,

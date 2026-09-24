@@ -83,6 +83,14 @@ describe("header", () => {
       { ...graphOf({}), built_at: "last tuesday" },
       ["S1 error null"],
     ],
+    "a date-only built_at": [
+      { ...graphOf({}), built_at: "2026-09-16" },
+      ["S1 error null"],
+    ],
+    "an impossible built_at": [
+      { ...graphOf({}), built_at: "2026-02-30T00:00:00Z" },
+      ["S1 error null"],
+    ],
     "an empty report_id": [
       { ...graphOf({}), report_id: "" },
       ["S1 error null"],
@@ -94,6 +102,16 @@ describe("header", () => {
       assert.deepEqual(codes(graph), expected);
     });
   }
+
+  it("accepts a built_at with seconds, fractions or an offset", () => {
+    for (const built_at of [
+      "2026-09-16T14:20Z",
+      "2026-09-16T14:20:00.123Z",
+      "2026-09-16T14:20:00+05:30",
+    ]) {
+      assert.deepEqual(codes({ ...graphOf({}), built_at }), []);
+    }
+  });
 
   it("accepts a later minor version", () => {
     assert.deepEqual(codes({ trailline: "1.4", nodes: {} }), []);
@@ -188,6 +206,21 @@ describe("sources", () => {
       codes(graphOf({ x1: { step: "source", kind: "external" } })),
       ["S7 warning x1", "S7 warning x1", "S7 warning x1"],
     );
+  });
+
+  it("treats blank descriptive fields as missing", () => {
+    const blank = {
+      step: "source",
+      kind: "external",
+      type: "",
+      ref: " ",
+      given: "",
+    };
+    assert.deepEqual(codes(graphOf({ x1: blank })), [
+      "S7 warning x1",
+      "S7 warning x1",
+      "S7 warning x1",
+    ]);
   });
 
   const badSource = {

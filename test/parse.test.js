@@ -75,6 +75,11 @@ describe("findEmbeddedGraph", () => {
     );
   });
 
+  it("does not end the block at a lookalike closing tag", () => {
+    const json = '{"a":"</scripture>"}';
+    assert.equal(findEmbeddedGraph(page(block(json))).content, json);
+  });
+
   it("refuses an unclosed block", () => {
     assert.throws(
       () => findEmbeddedGraph('<script type="application/trailline+json">{}'),

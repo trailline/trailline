@@ -41,6 +41,8 @@ export const RULES = {
 
 const MAX_ROWS = 10;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const ISO_TIMESTAMP =
+  /^(\d{4}-\d{2}-\d{2})T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/;
 
 const HEADER_FIELDS = new Set([
   "trailline",
@@ -167,10 +169,7 @@ function checkHeader(graph, report) {
       report("S1", null, field, `\`${field}\` must be a non-empty string`);
     }
   }
-  if (
-    graph.built_at !== undefined &&
-    !(isString(graph.built_at) && !Number.isNaN(Date.parse(graph.built_at)))
-  ) {
+  if (graph.built_at !== undefined && !isIsoTimestamp(graph.built_at)) {
     report("S1", null, "built_at", "`built_at` must be an ISO timestamp");
   }
 
@@ -227,7 +226,8 @@ function checkNode(id, node, report) {
     }
   };
   const want = (field, what) => {
-    if (node[field] === undefined) {
+    const value = node[field];
+    if (value === undefined || (isString(value) && value.trim() === "")) {
       report("S7", id, field, `${node.step} has no \`${field}\` (${what})`);
     }
   };
@@ -406,6 +406,12 @@ function isIsoDate(value) {
   if (!isString(value) || !ISO_DATE.test(value)) return false;
   const date = new Date(`${value}T00:00:00Z`);
   return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
+}
+
+/** `2026-09-16T14:20:00Z` or with an offset; the date part must exist. */
+function isIsoTimestamp(value) {
+  const match = isString(value) && ISO_TIMESTAMP.exec(value);
+  return Boolean(match) && isIsoDate(match[1]);
 }
 
 function isRows(value) {
