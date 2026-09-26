@@ -29,6 +29,8 @@ const REQUIRED = [
   "src/graph/parse.js",
   "src/graph/schema.js",
   "src/html/page.js",
+  "src/sql/style.js",
+  "src/check/rules.js",
   "package.json",
   "README.md",
   "LICENSE",
