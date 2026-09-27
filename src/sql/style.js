@@ -1,22 +1,11 @@
 /**
- * The mechanical half of the SQL style rules: checks that scan a query's
- * words and parentheses, never its meaning. `check` runs these over sources,
- * views and figure queries (rule C8) and over a source's own SQL for date
- * functions (rule C7). A SQL parser is deliberately out of scope; that is
- * rule C10, deferred.
+ * The mechanical SQL checks: no `select *`, no date functions, and parents
+ * named by node id so the composed script runs. They scan a query's words and
+ * parentheses, never its meaning. `check` runs them over sources, views and
+ * figure queries (rule C8) and over a source's own SQL for date functions
+ * (rule C7). A SQL parser is deliberately out of scope; that is rule C10,
+ * deferred.
  */
-
-const KEYWORDS = new Set(
-  (
-    "select from where group by having order limit offset qualify join inner " +
-    "left right full outer cross natural on using and or not as in is null " +
-    "between like ilike case when then else end distinct union all with over " +
-    "partition asc desc exists true false lateral window pivot unpivot"
-  ).split(" "),
-);
-
-const JOIN_MODIFIERS =
-  /(?:\b(?:left|right|inner|full|outer|cross|natural)\s+)+$/gi;
 
 const CLAUSE_PATTERN =
   /\b(select|from|where|group\s+by|having|order\s+by|limit|qualify|union|join)\b/gi;
@@ -121,24 +110,15 @@ function parenDepths(code) {
   return depths;
 }
 
-/** The line-start offset of the line containing `index`. */
-function lineStart(code, index) {
-  const nl = code.lastIndexOf("\n", index - 1);
-  return nl === -1 ? 0 : nl + 1;
-}
-
-const collapse = (text) => text.replace(/\s+/g, " ").trim();
-
 /** Escape a string for use inside a regex, so an arbitrary id cannot break it. */
 const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
- * The §6 mechanical style rules for one query.
+ * The mechanical SQL rules for one query.
  * @param {string} sql
  * @param {{ parents?: string[] }} [options]  node ids the query must name
  * @returns {{ rule: string, message: string }[]}  at most one finding per
- *   rule, in this order: select-star, lowercase, clause-per-line,
- *   column-per-line, unnamed-column, short-alias, date-function, parent-ref
+ *   rule, in this order: select-star, date-function, parent-ref
  */
 export function checkSqlStyle(sql, { parents = [] } = {}) {
   const code = maskSql(sql);
@@ -173,7 +153,6 @@ export function checkSqlStyle(sql, { parents = [] } = {}) {
         items.push({
           start: itemStart,
           end: i,
-          text: sql.slice(itemStart, i),
           code: code.slice(itemStart, i),
         });
         itemStart = i + 1;
@@ -187,98 +166,6 @@ export function checkSqlStyle(sql, { parents = [] } = {}) {
     findings.push({
       rule: "select-star",
       message: "uses select *; list the columns",
-    });
-  }
-
-  // lowercase
-  const lowercaseBad = [];
-  const lowercaseSeen = new Set();
-  for (const match of code.matchAll(/\b[a-z_]\w*\b/gi)) {
-    if (code[match.index - 1] === ".") continue;
-    const word = match[0];
-    const lower = word.toLowerCase();
-    if (!KEYWORDS.has(lower) || word === lower) continue;
-    if (lowercaseSeen.has(word)) continue;
-    lowercaseSeen.add(word);
-    lowercaseBad.push(word);
-  }
-  if (lowercaseBad.length > 0) {
-    findings.push({
-      rule: "lowercase",
-      message: `keywords must be lowercase: ${lowercaseBad.join(", ")}`,
-    });
-  }
-
-  // clause-per-line
-  const clauseBad = [];
-  for (const match of clauses) {
-    const start = lineStart(code, match.index);
-    const before = code.slice(start, match.index).replace(JOIN_MODIFIERS, "");
-    if (before.trim() === "") continue;
-    clauseBad.push(collapse(match[0]));
-  }
-  if (clauseBad.length > 0) {
-    findings.push({
-      rule: "clause-per-line",
-      message: `each clause starts its own line: ${clauseBad.join(", ")}`,
-    });
-  }
-
-  // column-per-line
-  let columnBad = false;
-  for (const list of selectLists) {
-    const listItems = items.filter(
-      (item) => item.start >= list.start && item.end <= list.end,
-    );
-    if (listItems.length === 0) continue;
-    for (const item of listItems) {
-      const leading = item.code.match(/^\s*/)[0];
-      const newLine = leading.includes("\n");
-      if (listItems.length >= 2 && !newLine) columnBad = true;
-      if (newLine) {
-        const indent = leading.slice(leading.lastIndexOf("\n") + 1);
-        if (indent.length === 0) columnBad = true;
-      }
-    }
-  }
-  if (columnBad) {
-    findings.push({
-      rule: "column-per-line",
-      message: "put each selected column on its own line, indented",
-    });
-  }
-
-  // unnamed-column
-  const unnamedBad = [];
-  for (const item of items) {
-    const trimmed = item.code.trim();
-    if (trimmed === "" || /(^|\.)\*$/.test(trimmed)) continue;
-    if (/^(?:[a-z_]\w*\.)?[a-z_]\w*$/i.test(trimmed)) continue;
-    if (/\sas\s+[a-z_]\w*$/i.test(trimmed)) continue;
-    unnamedBad.push(collapse(item.text));
-  }
-  if (unnamedBad.length > 0) {
-    findings.push({
-      rule: "unnamed-column",
-      message: `name each computed column with \`as\`: ${unnamedBad.join(", ")}`,
-    });
-  }
-
-  // short-alias
-  const aliasBad = new Set();
-  for (const match of code.matchAll(/\bas\s+([a-z_]\w*)/gi)) {
-    if (match[1].length < 3) aliasBad.add(match[1]);
-  }
-  for (const match of code.matchAll(
-    /\b(?:from|join)[ \t]+[a-z_][\w.$]*[ \t]+([a-z_]\w*)/gi,
-  )) {
-    if (KEYWORDS.has(match[1].toLowerCase())) continue;
-    if (match[1].length < 3) aliasBad.add(match[1]);
-  }
-  if (aliasBad.size > 0) {
-    findings.push({
-      rule: "short-alias",
-      message: `aliases need at least 3 characters: ${[...aliasBad].join(", ")}`,
     });
   }
 

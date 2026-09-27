@@ -1,7 +1,7 @@
 /**
  * The check rules that need more than one node or the page.
  * `validateGraph()` (`../graph/schema.js`) owns the per-node ones (S1–S8, C4,
- * C9). C12 (captured SQL) lives with the capture matching. Pure: no file I/O.
+ * C9). Pure: no file I/O.
  */
 
 import { bareNumbers } from "../graph/numbers.js";
@@ -30,8 +30,6 @@ export const RULES = {
     title: "sql source is incomplete or not pinned to its period",
   },
   C8: { severity: "warning", title: "SQL breaks the style rules" },
-  C11: { severity: "warning", title: "over 20% of bound nodes are ungrounded" },
-  C13: { severity: "warning", title: "views chain more than one level deep" },
 };
 
 const isObject = (value) =>
@@ -90,8 +88,6 @@ export function checkRules(graph, page) {
   checkC6(nodes, has, report);
   checkC7(nodes, report);
   checkC8(nodes, report);
-  checkC11(nodes, has, node, page, report);
-  checkC13(nodes, report);
 
   return issues;
 }
@@ -385,51 +381,5 @@ function checkC8(nodes, report) {
         `SQL style: ${findings.map((f) => f.message).join("; ")}`,
       );
     }
-  }
-}
-
-function checkC11(nodes, has, node, page, report) {
-  const bound = [];
-  const boundSet = new Set();
-  for (const binding of page.bindings) {
-    if (has(binding.id) && !boundSet.has(binding.id)) {
-      boundSet.add(binding.id);
-      bound.push(binding.id);
-    }
-  }
-  const ungrounded = bound.filter((id) => node(id)?.ungrounded === true);
-  if (bound.length > 0 && ungrounded.length / bound.length > 0.2) {
-    const pct = Math.round((100 * ungrounded.length) / bound.length);
-    report(
-      "C11",
-      null,
-      null,
-      `${ungrounded.length} of ${bound.length} bound nodes are ungrounded (${pct}%): ${ungrounded.join(", ")}`,
-    );
-  }
-}
-
-function checkC13(nodes, report) {
-  const viewWithFrom = (id) => {
-    const n = nodes[id];
-    return isObject(n) && n.step === "view" && isStringArray(n.from) ? n : null;
-  };
-
-  for (const id of Object.keys(nodes)) {
-    const v = viewWithFrom(id);
-    if (!v) continue;
-    const w = v.from.map(viewWithFrom).find((x) => x !== null);
-    if (!w) continue;
-    const wId = v.from.find((p) => viewWithFrom(p) === w);
-    const x = w.from.map(viewWithFrom).find((val) => val !== null);
-    if (!x) continue;
-    const xId = w.from.find((p) => viewWithFrom(p) === x);
-    if (id === wId || id === xId || wId === xId) continue;
-    report(
-      "C13",
-      id,
-      "from",
-      `${id} <- ${wId} <- ${xId}: views chain more than one level deep; flatten on rebuild`,
-    );
   }
 }

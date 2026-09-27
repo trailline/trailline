@@ -522,7 +522,7 @@ describe("C7", () => {
 });
 
 describe("C8", () => {
-  it("reports messy v2 once, listing every finding", () => {
+  it("reports messy v2 once", () => {
     const { graph } = fixture("messy");
     assert.deepEqual(
       only(checkRules(graph, pageOf([])), "C8").filter((i) => i.node === "v2"),
@@ -532,8 +532,7 @@ describe("C8", () => {
           severity: "warning",
           node: "v2",
           field: "sql",
-          message:
-            "SQL style: keywords must be lowercase: SELECT, FROM, ORDER, BY, DESC; each clause starts its own line: FROM, ORDER BY; put each selected column on its own line, indented; aliases need at least 3 characters: c",
+          message: "SQL style: uses select *; list the columns",
         },
       ],
     );
@@ -544,7 +543,7 @@ describe("C8", () => {
       q1: {
         ...source,
         period: { from: "2026-08-01", to: "2026-08-31" },
-        sql: "SELECT\n    sessions\nfrom marts.web\nwhere d >= dateadd('day', -1, '2026-08-31')",
+        sql: "select\n    *\nfrom marts.web\nwhere d >= dateadd('day', -1, '2026-08-31')",
       },
     };
     assert.deepEqual(only(checkRules({ nodes }, pageOf([])), "C8"), [
@@ -553,7 +552,7 @@ describe("C8", () => {
         severity: "warning",
         node: "q1",
         field: "sql",
-        message: "SQL style: keywords must be lowercase: SELECT",
+        message: "SQL style: uses select *; list the columns",
       },
     ]);
     assert.deepEqual(only(checkRules({ nodes }, pageOf([])), "C7"), [
@@ -592,83 +591,6 @@ describe("C8", () => {
   });
 });
 
-describe("C11", () => {
-  it("warns when over 20% of bound nodes are ungrounded", () => {
-    const ung = {
-      step: "insight",
-      from: [],
-      ungrounded: true,
-      text: "t",
-    };
-    const nodes = {
-      i1: { step: "insight", from: ["f1"], text: "t" },
-      f1: fig({}),
-      v1: { step: "view", from: [], ungrounded: false },
-      i2: ung,
-      i3: ung,
-      i4: ung,
-    };
-    const page = pageOf(["i1", "f1", "f1", "v1", "i2", "i3", "zz"]);
-    assert.deepEqual(only(checkRules({ nodes }, page), "C11"), [
-      {
-        code: "C11",
-        severity: "warning",
-        node: null,
-        field: null,
-        message: "2 of 5 bound nodes are ungrounded (40%): i2, i3",
-      },
-    ]);
-  });
-
-  it("stays quiet at 20% or with nothing bound", () => {
-    const nodes = {
-      a: fig({}),
-      b: fig({}),
-      c: fig({}),
-      d: fig({}),
-      e: { ...fig({}), ungrounded: true },
-    };
-    assert.deepEqual(
-      only(checkRules({ nodes }, pageOf(["a", "b", "c", "d", "e"])), "C11"),
-      [],
-    );
-    assert.deepEqual(only(checkRules({ nodes }, pageOf([])), "C11"), []);
-  });
-});
-
-describe("C13", () => {
-  it("warns on a view two views away from its source", () => {
-    const V = (from) => ({ step: "view", from, sql: "s" });
-    const nodes = {
-      q1: { step: "source", kind: "sql" },
-      v1: V(["q1"]),
-      v2: V(["v1"]),
-      v3: V(["v2"]),
-      v4: V(["v3"]),
-      v5: V(["v6"]),
-      v6: V(["v5"]),
-    };
-    assert.deepEqual(only(checkRules({ nodes }, pageOf([])), "C13"), [
-      {
-        code: "C13",
-        severity: "warning",
-        node: "v3",
-        field: "from",
-        message:
-          "v3 <- v2 <- v1: views chain more than one level deep; flatten on rebuild",
-      },
-      {
-        code: "C13",
-        severity: "warning",
-        node: "v4",
-        field: "from",
-        message:
-          "v4 <- v3 <- v2: views chain more than one level deep; flatten on rebuild",
-      },
-    ]);
-  });
-});
-
 describe("checkRules on fixtures", () => {
   it("clean raises nothing", () => {
     const { graph, page } = fixture("clean");
@@ -683,8 +605,6 @@ describe("checkRules on fixtures", () => {
       { code: "C3", severity: "warning", node: "f1" },
       { code: "C7", severity: "warning", node: "q2" },
       { code: "C8", severity: "warning", node: "v2" },
-      { code: "C11", severity: "warning", node: null },
-      { code: "C13", severity: "warning", node: "v3" },
     ]);
     assert.equal(
       issues.find((i) => i.code === "C2").message,
@@ -693,14 +613,6 @@ describe("checkRules on fixtures", () => {
     assert.equal(
       issues.find((i) => i.code === "C3").message,
       'page shows "$58.90" but display is "$61.20"',
-    );
-    assert.equal(
-      issues.find((i) => i.code === "C11").message,
-      "3 of 11 bound nodes are ungrounded (27%): i2, i3, i4",
-    );
-    assert.equal(
-      issues.find((i) => i.code === "C13").message,
-      "v3 <- v2 <- v1: views chain more than one level deep; flatten on rebuild",
     );
   });
 
@@ -732,26 +644,35 @@ describe("fixture contract", () => {
       const actual = [...validateGraph(graph), ...checkRules(graph, page)]
         .map(key)
         .sort();
-      const wanted = expected.issues
-        .filter((issue) => issue.code in SCHEMA_RULES || issue.code in RULES)
-        .map(key)
-        .sort();
+      const wanted = expected.issues.map(key).sort();
       assert.deepEqual(actual, wanted);
     });
   }
 
-  it("every expected severity matches the rule table", () => {
+  it("every expected code is a rule, with that rule's severity", () => {
     for (const name of FIXTURE_NAMES) {
       for (const issue of loadFixture(name).expected.issues) {
-        if (issue.code in RULES) {
-          assert.equal(issue.severity, RULES[issue.code].severity, key(issue));
-        }
+        const table = issue.code in SCHEMA_RULES ? SCHEMA_RULES : RULES;
+        assert.ok(issue.code in table, key(issue));
+        assert.equal(issue.severity, table[issue.code].severity, key(issue));
       }
     }
   });
 });
 
 describe("checkRules", () => {
+  it("raises only the rules it lists", () => {
+    assert.deepEqual(Object.keys(RULES), [
+      "C1",
+      "C2",
+      "C3",
+      "C5",
+      "C6",
+      "C7",
+      "C8",
+    ]);
+  });
+
   it("returns nothing for a graph without a nodes object", () => {
     assert.deepEqual(checkRules({}, pageOf(["a"])), []);
     assert.deepEqual(checkRules(null, pageOf(["a"])), []);

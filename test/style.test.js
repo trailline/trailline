@@ -45,83 +45,37 @@ describe("checkSqlStyle", () => {
     }
   });
 
-  it("wants lowercase keywords, ignoring strings", () => {
-    const sql = "select\n    channel\nFrom q1\nwhere channel = 'SELECT'";
+  it("reports its three rules in order: select *, date functions, parents", () => {
+    const sql = "select\n    *\nfrom marts.orders\nwhere d >= current_date";
     assert.deepEqual(checkSqlStyle(sql, { parents: ["q1"] }), [
+      { rule: "select-star", message: "uses select *; list the columns" },
       {
-        rule: "lowercase",
-        message: "keywords must be lowercase: From",
+        rule: "date-function",
+        message: "use literal ISO dates, not date functions: current_date",
       },
+      { rule: "parent-ref", message: "refer to parents by node id: q1" },
     ]);
   });
 
-  it("wants each clause on its own line", () => {
-    const sql = "select\n    channel\nfrom q1 where channel = 'x'";
-    assert.deepEqual(checkSqlStyle(sql, { parents: ["q1"] }), [
-      {
-        rule: "clause-per-line",
-        message: "each clause starts its own line: where",
-      },
-    ]);
+  it("does not count * in arithmetic, count(*), strings or comments", () => {
+    const sql =
+      "select\n    spend * 2 as doubled, -- not select *\n    count(*) as orders,\n    '*' as mark\nfrom v1";
+    assert.deepEqual(checkSqlStyle(sql, { parents: ["v1"] }), []);
+  });
+
+  it("ignores keyword case, layout, alias length and unnamed columns", () => {
+    const a = "SELECT c.channel, c.cost_per_customer FROM v1 c ORDER BY 2 DESC";
+    assert.deepEqual(checkSqlStyle(a, { parents: ["v1"] }), []);
+
+    const b =
+      "select channel, sum(spend)\nfrom q1 left join q2 on q2.channel = q1.channel";
+    assert.deepEqual(checkSqlStyle(b, { parents: ["q1", "q2"] }), []);
   });
 
   it("does not treat words inside parentheses as clauses", () => {
     const sql =
       "select\n    rank() over (partition by channel order by retention desc) as retention_rank,\n    extract(month from cohort_month) as month_number\nfrom v1";
     assert.deepEqual(checkSqlStyle(sql, { parents: ["v1"] }), []);
-  });
-
-  it("lets a join keep its modifiers on its line", () => {
-    const good =
-      "select\n    q1.channel\nfrom q1\nleft join q2\n    on q2.channel = q1.channel";
-    assert.deepEqual(checkSqlStyle(good, { parents: ["q1", "q2"] }), []);
-
-    const bad =
-      "select\n    q1.channel\nfrom q1 left join q2 on q2.channel = q1.channel";
-    assert.deepEqual(checkSqlStyle(bad, { parents: ["q1", "q2"] }), [
-      {
-        rule: "clause-per-line",
-        message: "each clause starts its own line: join",
-      },
-    ]);
-  });
-
-  it("wants selected columns one per line, indented", () => {
-    const bad1 = "select channel, retention\nfrom v1";
-    const bad2 = "select\n    channel,\nretention\nfrom v1";
-    const good = "select retention\nfrom v1";
-    const issue = [
-      {
-        rule: "column-per-line",
-        message: "put each selected column on its own line, indented",
-      },
-    ];
-    assert.deepEqual(checkSqlStyle(bad1, { parents: ["v1"] }), issue);
-    assert.deepEqual(checkSqlStyle(bad2, { parents: ["v1"] }), issue);
-    assert.deepEqual(checkSqlStyle(good, { parents: ["v1"] }), []);
-  });
-
-  it("wants computed columns named with as", () => {
-    const sql =
-      "select\n    channel,\n    avg(retention_30d),\n    sum(spend)   total\nfrom q1\ngroup by channel";
-    assert.deepEqual(checkSqlStyle(sql, { parents: ["q1"] }), [
-      {
-        rule: "unnamed-column",
-        message:
-          "name each computed column with `as`: avg(retention_30d), sum(spend) total",
-      },
-    ]);
-  });
-
-  it("rejects aliases shorter than three characters", () => {
-    const sql =
-      "select\n    r.channel,\n    count(r.id) as n\nfrom q1 as r\njoin q2 rc\n    on rc.channel = r.channel";
-    assert.deepEqual(checkSqlStyle(sql, { parents: ["q1", "q2"] }), [
-      {
-        rule: "short-alias",
-        message: "aliases need at least 3 characters: n, r, rc",
-      },
-    ]);
   });
 
   it("rejects date functions", () => {
@@ -157,31 +111,6 @@ describe("checkSqlStyle", () => {
       },
     ]);
   });
-
-  it("lets a full outer join or natural left join keep its modifiers on its line", () => {
-    for (const [modifiers, join] of [
-      ["left outer", "left outer join"],
-      ["full outer", "full outer join"],
-      ["natural left", "natural left join"],
-    ]) {
-      const good = `select\n    q1.channel\nfrom q1\n${join} q2\n    on q2.channel = q1.channel`;
-      assert.deepEqual(
-        checkSqlStyle(good, { parents: ["q1", "q2"] }),
-        [],
-        modifiers,
-      );
-    }
-  });
-
-  it("reads select-list layout from the masked code, not comments", () => {
-    const sql = "select\n    a, -- the key\n    b -- other\nfrom v1";
-    assert.deepEqual(checkSqlStyle(sql, { parents: ["v1"] }), []);
-  });
-
-  it("wants selected columns one per line, indented, on CRLF SQL", () => {
-    const sql = "select\r\n    a,\r\n    b\r\nfrom v1";
-    assert.deepEqual(checkSqlStyle(sql, { parents: ["v1"] }), []);
-  });
 });
 
 describe("checkSqlStyle on fixtures", () => {
@@ -214,27 +143,15 @@ describe("checkSqlStyle on fixtures", () => {
     ]);
   });
 
-  it("messy v2 breaks four rules, in rule order", () => {
+  it("messy v2 only uses select *", () => {
     const { reportPath } = loadFixture("messy");
     const { graph } = readGraph({ reportPath });
     assert.deepEqual(
       checkSqlStyle(graph.nodes.v2.sql, { parents: graph.nodes.v2.from }),
       [
         {
-          rule: "lowercase",
-          message: "keywords must be lowercase: SELECT, FROM, ORDER, BY, DESC",
-        },
-        {
-          rule: "clause-per-line",
-          message: "each clause starts its own line: FROM, ORDER BY",
-        },
-        {
-          rule: "column-per-line",
-          message: "put each selected column on its own line, indented",
-        },
-        {
-          rule: "short-alias",
-          message: "aliases need at least 3 characters: c",
+          rule: "select-star",
+          message: "uses select *; list the columns",
         },
       ],
     );
