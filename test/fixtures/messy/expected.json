@@ -7,7 +7,7 @@
     { "code": "S7", "severity": "warning", "node": "f2", "note": "no `label`" },
     { "code": "C2", "severity": "warning", "node": "i1", "note": "bare '1,240' in prose; the '$50' in ungrounded i2 is allowed" },
     { "code": "C3", "severity": "warning", "node": "f1", "note": "display $61.20, page shows $58.90 twice" },
-    { "code": "C7", "severity": "warning", "node": "q2", "note": "no `columns`, period not in the SQL as literals, uses dateadd/current_date. Reported once, as C7, not again as C8" },
+    { "code": "C7", "severity": "warning", "node": "q2", "note": "no `columns`, period not in the SQL as literals, uses current_date. Reported once, as C7, not again as C8" },
     { "code": "C8", "severity": "warning", "node": "v2", "note": "select *. Its uppercase one-line layout is not checked" }
   ],
   "notes": [

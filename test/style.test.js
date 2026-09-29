@@ -32,13 +32,43 @@ describe("dateFunctions", () => {
   it("lists each date function once, as first written, outside strings and comments", () => {
     const sql =
       "where d >= dateadd('day', -30, current_date) and e < CURRENT_DATE and f = 'now()' -- getdate()";
-    assert.deepEqual(dateFunctions(sql), ["dateadd", "current_date"]);
+    assert.deepEqual(dateFunctions(sql), ["current_date"]);
+  });
+
+  it("finds every function that reads the clock", () => {
+    const sql =
+      "select current_timestamp, current_time, localtimestamp, localtime, sysdate(), systimestamp(), getdate(), now()";
+    assert.deepEqual(dateFunctions(sql), [
+      "current_timestamp",
+      "current_time",
+      "localtimestamp",
+      "localtime",
+      "sysdate",
+      "systimestamp",
+      "getdate",
+      "now",
+    ]);
+  });
+
+  it("allows date arithmetic over literal dates", () => {
+    const sql = "where d >= dateadd('day', -1, '2026-08-31')";
+    assert.deepEqual(dateFunctions(sql), []);
   });
 });
 
 describe("checkSqlStyle", () => {
   it("rejects select *", () => {
-    for (const sql of ["select\n    *\nfrom q1", "select\n    q1.*\nfrom q1"]) {
+    for (const sql of [
+      "select\n    *\nfrom q1",
+      "select\n    q1.*\nfrom q1",
+      "with a as (\n    select * from q1\n)\nselect\n    channel\nfrom a",
+      "select\n    channel\nfrom (select * from q1)",
+      "select\n    channel\nfrom q1\nwhere id in (select distinct * from q1)",
+      "select * exclude (spend)\nfrom q1",
+      "select q1.* replace (spend * 2 as spend)\nfrom q1",
+      "select * rename (spend as cost), channel\nfrom q1",
+      "select * ilike '%spend%'\nfrom q1",
+    ]) {
       assert.deepEqual(checkSqlStyle(sql, { parents: ["q1"] }), [
         { rule: "select-star", message: "uses select *; list the columns" },
       ]);
@@ -72,6 +102,12 @@ describe("checkSqlStyle", () => {
     assert.deepEqual(checkSqlStyle(b, { parents: ["q1", "q2"] }), []);
   });
 
+  it("does not count * or clauses inside nested queries' own parentheses", () => {
+    const sql =
+      "with a as (\n    select\n        channel,\n        count(*) as n\n    from q1\n    group by channel\n)\nselect\n    channel\nfrom a\nwhere n > (select count(*) * 2 from q1)";
+    assert.deepEqual(checkSqlStyle(sql, { parents: ["q1"] }), []);
+  });
+
   it("does not treat words inside parentheses as clauses", () => {
     const sql =
       "select\n    rank() over (partition by channel order by retention desc) as retention_rank,\n    extract(month from cohort_month) as month_number\nfrom v1";
@@ -80,11 +116,11 @@ describe("checkSqlStyle", () => {
 
   it("rejects date functions", () => {
     const sql =
-      "select\n    channel\nfrom q1\nwhere day >= dateadd('day', -7, '2026-08-31')";
+      "select\n    channel\nfrom q1\nwhere day >= dateadd('day', -7, sysdate())";
     assert.deepEqual(checkSqlStyle(sql, { parents: ["q1"] }), [
       {
         rule: "date-function",
-        message: "use literal ISO dates, not date functions: dateadd",
+        message: "use literal ISO dates, not date functions: sysdate",
       },
     ]);
   });
@@ -137,8 +173,7 @@ describe("checkSqlStyle on fixtures", () => {
     assert.deepEqual(checkSqlStyle(graph.nodes.q2.sql, { parents: [] }), [
       {
         rule: "date-function",
-        message:
-          "use literal ISO dates, not date functions: dateadd, current_date",
+        message: "use literal ISO dates, not date functions: current_date",
       },
     ]);
   });

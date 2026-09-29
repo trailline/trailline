@@ -82,8 +82,8 @@ export function checkRules(graph, page) {
     });
 
   checkC1(nodes, has, node, page, report);
-  checkC2(node, page, report);
-  checkC3(nodes, node, page, report);
+  checkC2(page, report);
+  checkC3(node, page, report);
   checkC5(nodes, has, node, report);
   checkC6(nodes, has, report);
   checkC7(nodes, report);
@@ -130,7 +130,7 @@ function checkC1(nodes, has, node, page, report) {
   }
 }
 
-function checkC2(node, page, report) {
+function checkC2(page, report) {
   for (const entry of page.prose) {
     for (const token of bareNumbers(entry.text)) {
       report(
@@ -143,7 +143,7 @@ function checkC2(node, page, report) {
   }
 }
 
-function checkC3(nodes, node, page, report) {
+function checkC3(node, page, report) {
   const byId = new Map();
   for (const binding of page.bindings) {
     if (!byId.has(binding.id)) byId.set(binding.id, []);

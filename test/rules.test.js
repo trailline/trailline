@@ -474,7 +474,7 @@ describe("C7", () => {
           node: "q2",
           field: null,
           message:
-            "sql source is missing `columns`; SQL does not contain the period as literal dates: '2026-08-01', '2026-08-31'; SQL uses date functions: dateadd, current_date",
+            "sql source is missing `columns`; SQL does not contain the period as literal dates: '2026-08-01', '2026-08-31'; SQL uses date functions: current_date",
         },
       ],
     );
@@ -543,7 +543,7 @@ describe("C8", () => {
       q1: {
         ...source,
         period: { from: "2026-08-01", to: "2026-08-31" },
-        sql: "select\n    *\nfrom marts.web\nwhere d >= dateadd('day', -1, '2026-08-31')",
+        sql: "select\n    *\nfrom marts.web\nwhere d >= dateadd('day', -1, current_date)",
       },
     };
     assert.deepEqual(only(checkRules({ nodes }, pageOf([])), "C8"), [
@@ -562,7 +562,7 @@ describe("C8", () => {
         node: "q1",
         field: null,
         message:
-          "SQL does not contain the period as literal dates: '2026-08-01'; SQL uses date functions: dateadd",
+          "SQL does not contain the period as literal dates: '2026-08-01', '2026-08-31'; SQL uses date functions: current_date",
       },
     ]);
   });

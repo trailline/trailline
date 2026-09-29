@@ -10,7 +10,11 @@
 const CLAUSE_PATTERN =
   /\b(select|from|where|group\s+by|having|order\s+by|limit|qualify|union|join)\b/gi;
 
-const DATE_FUNCTION_PATTERN = /\b(current_date|dateadd|getdate|now)\b/gi;
+const DATE_FUNCTION_PATTERN =
+  /\b(current_date|current_timestamp|current_time|localtimestamp|localtime|sysdate|systimestamp|getdate|now)\b/gi;
+
+/** A select item that is a star, bare or qualified, with Snowflake's modifiers. */
+const STAR_PATTERN = /(^|\.)\*(\s+(exclude|replace|rename|ilike)\b[\s\S]*)?$/i;
 
 /**
  * Blank out comments, and the contents of quoted strings and identifiers, so
@@ -81,8 +85,10 @@ export function maskSql(sql, { keepStrings = false } = {}) {
 }
 
 /**
- * Date functions used instead of literal dates: current_date, dateadd,
- * getdate, now. Whole words, any case, outside strings and comments.
+ * Functions that read the clock instead of a literal date: current_date,
+ * current_timestamp, current_time, localtimestamp, localtime, sysdate,
+ * systimestamp, getdate, now. Date arithmetic over literals (`dateadd`) is
+ * pinned and allowed. Whole words, any case, outside strings and comments.
  * @param {string} sql
  * @returns {string[]}  each function once, as first written, in order
  */
@@ -125,44 +131,38 @@ export function checkSqlStyle(sql, { parents = [] } = {}) {
   const depths = parenDepths(code);
   const findings = [];
 
-  const clauses = [...code.matchAll(CLAUSE_PATTERN)].filter(
-    (match) => depths[match.index] === 0,
-  );
+  const clauses = [...code.matchAll(CLAUSE_PATTERN)];
 
-  // select lists: from after each "select" clause (skipping "distinct") to
-  // the next clause or end of code.
-  const selectLists = [];
+  // select-star: split each select list, at any nesting depth, into items.
+  // A list runs from its "select" (after any "distinct") to the next clause
+  // at the same depth, the parenthesis that closes it, or the end.
+  let star = false;
   for (const match of clauses) {
     if (match[0].toLowerCase() !== "select") continue;
+    const depth = depths[match.index];
     let start = match.index + match[0].length;
-    const distinct = /\s*\bdistinct\b/i.exec(code.slice(start));
-    if (distinct && distinct.index === 0) start += distinct[0].length;
-    const next = clauses.find((m) => m.index > match.index);
-    const end = next ? next.index : code.length;
-    selectLists.push({ start, end, text: sql.slice(start, end) });
-  }
+    const distinct = /^\s*\bdistinct\b/i.exec(code.slice(start));
+    if (distinct) start += distinct[0].length;
+    const next = clauses.find(
+      (m) => m.index > match.index && depths[m.index] === depth,
+    );
+    let end = next ? next.index : code.length;
+    for (let i = start; i < end; i++) {
+      if (depths[i] < depth) {
+        end = i;
+        break;
+      }
+    }
 
-  const items = [];
-  for (const list of selectLists) {
-    let depth0 = 0;
-    let itemStart = list.start;
-    for (let i = list.start; i <= list.end; i++) {
-      if (i < list.end && code[i] === "(") depth0++;
-      else if (i < list.end && code[i] === ")") depth0--;
-      if (i === list.end || (code[i] === "," && depth0 === 0)) {
-        items.push({
-          start: itemStart,
-          end: i,
-          code: code.slice(itemStart, i),
-        });
+    let itemStart = start;
+    for (let i = start; i <= end; i++) {
+      if (i === end || (code[i] === "," && depths[i] === depth)) {
+        if (STAR_PATTERN.test(code.slice(itemStart, i).trim())) star = true;
         itemStart = i + 1;
       }
     }
   }
-
-  // select-star
-  const stars = items.filter((item) => /(^|\.)\*\s*$/.test(item.code.trim()));
-  if (stars.length > 0) {
+  if (star) {
     findings.push({
       rule: "select-star",
       message: "uses select *; list the columns",
