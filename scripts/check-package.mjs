@@ -28,6 +28,7 @@ const REQUIRED = [
   "src/graph/numbers.js",
   "src/graph/parse.js",
   "src/graph/schema.js",
+  "src/html/embed.js",
   "src/html/page.js",
   "src/sql/style.js",
   "src/check/rules.js",
