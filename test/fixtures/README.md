@@ -3,11 +3,11 @@
 Three hand-written reports that pin down the file format. Every command is
 tested against them. If one of them is awkward to write, the format is wrong.
 
-| Fixture  | Graph lives in                 | What it covers                                             |
-| -------- | ------------------------------ | ---------------------------------------------------------- |
-| `clean`  | embedded in the HTML           | The happy path: everything traces, nothing fires           |
-| `messy`  | `.trailline/<stem>.json`       | Every warning, no errors; captures in `.trailline/captured` |
-| `broken` | `.trailline/<stem>.json`       | Every error                                                |
+| Fixture  | Graph lives in           | What it covers                                   |
+| -------- | ------------------------ | ------------------------------------------------- |
+| `clean`  | embedded in the HTML     | The happy path: everything traces, nothing fires |
+| `messy`  | `.trailline/<stem>.json` | Every warning, no errors                         |
+| `broken` | `.trailline/<stem>.json` | Every error                                      |
 
 Each folder has an `expected.json`: the issues `trailline check` must report,
 as `{ code, severity, node }`. Tests for a module compare against the subset
@@ -19,9 +19,9 @@ edits reports in place, and its tests compare against these originals.
 
 ## Capture files
 
-The Claude Code hook writes one file per warehouse call to
-`.trailline/captured/<n>.json`. The shape is fixed here so `check` can be
-built before the hook:
+The Claude Code hook (not shipped yet) would write one file per warehouse
+call to `.trailline/captured/<n>.json`. `check` does not read these files. The
+shape is fixed here so the hook can be added without a format change:
 
 ```json
 {

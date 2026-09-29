@@ -36,8 +36,8 @@
     "v2": {
       "step": "view",
       "from": ["v1"],
-      "sql": "SELECT c.channel, c.cost_per_customer FROM v1 c ORDER BY 2 DESC",
-      "columns": ["channel", "cost_per_customer"],
+      "sql": "SELECT * FROM v1 ORDER BY cost_per_customer DESC",
+      "columns": ["channel", "new_customers", "spend", "cost_per_customer"],
       "encoding": { "x": "channel", "y": "cost_per_customer", "visual": "bar" }
     },
     "v3": {
