@@ -56,6 +56,10 @@ export async function run(parsed, io) {
   const summary = summarize(graph, page, issues, {
     report: basename(reportPath),
   });
+  const failed = issues.some((issue) => issue.severity === "error");
+  // Embed before printing: if the report cannot take the graph, check fails
+  // with that error alone rather than after a summary that reads as passing.
+  if (!failed && !parsed.values["no-embed"]) embedFile(reportPath, html, graph);
   if (!parsed.values.quiet) {
     io.out(
       parsed.values.json
@@ -63,7 +67,5 @@ export async function run(parsed, io) {
         : formatSummary(summary, { color: io.color === true }),
     );
   }
-  const failed = issues.some((issue) => issue.severity === "error");
-  if (!failed && !parsed.values["no-embed"]) embedFile(reportPath, html, graph);
   return failed ? 1 : 0;
 }

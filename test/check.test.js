@@ -191,17 +191,25 @@ describe("check: exit code", () => {
     assert.equal(err, "");
   });
 
-  it("prints the summary, then fails, when the report cannot take the graph", async (t) => {
+  it("fails without a summary when the report cannot take the graph", async (t) => {
     const html = "<html><head></head><body><p>Hello.</p></html>";
     const { path } = report(t, html, G0);
     const { code, out, err } = await runCli(["check", path]);
     assert.equal(code, 1);
-    assert.equal(out, ZERO);
+    assert.equal(out, "");
     assert.equal(
       err,
       "trailline: the report has no </body> tag, so the lineage graph was not embedded",
     );
     assert.equal(readFileSync(path, "utf8"), html);
+  });
+
+  it("prints no JSON when the report cannot take the graph", async (t) => {
+    const html = "<html><head></head><body><p>Hello.</p></html>";
+    const { path } = report(t, html, G0);
+    const { code, out } = await runCli(["check", path, "--json"]);
+    assert.equal(code, 1);
+    assert.equal(out, "");
   });
 
   it("exits 0 and embeds when only warnings remain", async (t) => {

@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import {
+  chmodSync,
+  lstatSync,
   readdirSync,
   readFileSync,
   statSync,
+  symlinkSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
@@ -314,6 +317,29 @@ describe("embedFile", () => {
     assert.throws(() => embedFile(reportPath, html, G0), failsWith(NO_BODY));
     assert.equal(readFileSync(reportPath, "utf8"), html);
     assert.deepEqual(readdirSync(dir), ["r.html"]);
+  });
+
+  it("keeps the report's permissions", (t) => {
+    const dir = tempDir(t);
+    const reportPath = join(dir, "r.html");
+    writeFileSync(reportPath, A, "utf8");
+    chmodSync(reportPath, 0o600);
+
+    assert.equal(embedFile(reportPath, A, G0), true);
+    assert.equal(statSync(reportPath).mode & 0o7777, 0o600);
+  });
+
+  it("updates the file a symlinked report points to", (t) => {
+    const dir = tempDir(t);
+    const target = join(dir, "real.html");
+    const link = join(dir, "link.html");
+    writeFileSync(target, A, "utf8");
+    symlinkSync(target, link);
+
+    assert.equal(embedFile(link, A, G0), true);
+    assert.equal(lstatSync(link).isSymbolicLink(), true);
+    assert.equal(readFileSync(target, "utf8"), embedGraph(A, G0));
+    assert.deepEqual(readdirSync(dir).sort(), ["link.html", "real.html"]);
   });
 
   it("reports a write it could not make", (t) => {

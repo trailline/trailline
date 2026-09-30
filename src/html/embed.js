@@ -6,7 +6,14 @@
  * and writes via a temp file and a rename.
  */
 
-import { renameSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  realpathSync,
+  renameSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { basename, dirname, join } from "node:path";
 
 import { TraillineError } from "../errors.js";
@@ -100,26 +107,32 @@ export function embedGraph(html, graph) {
 
 /**
  * Embed `graph` into the report at `reportPath`, whose current text is
- * `html`. Writes only when the text changes, through a temp file in the same
- * directory and a rename, so a crash cannot leave a half-written report.
+ * `html`. Writes only when the text changes, through a temp file and a
+ * rename, so a crash cannot leave a half-written report. A symlinked report
+ * is resolved first, so the file it points to is the one updated and the
+ * link stays a link; the new file keeps the report's permissions.
  * @returns {boolean} true when the file was written
  */
 export function embedFile(reportPath, html, graph) {
   const next = embedGraph(html, graph);
   if (next === html) return false;
 
-  const temp = join(
-    dirname(reportPath),
-    `.${basename(reportPath)}.${process.pid}.tmp`,
-  );
+  let temp = null;
   try {
-    writeFileSync(temp, next, "utf8");
-    renameSync(temp, reportPath);
+    const target = realpathSync(reportPath);
+    const mode = statSync(target).mode & 0o7777;
+    temp = join(dirname(target), `.${basename(target)}.${process.pid}.tmp`);
+    writeFileSync(temp, next, { encoding: "utf8", mode });
+    // The umask may have narrowed `mode` on create; set it exactly.
+    chmodSync(temp, mode);
+    renameSync(temp, target);
   } catch (error) {
-    try {
-      unlinkSync(temp);
-    } catch {
-      // best effort
+    if (temp !== null) {
+      try {
+        unlinkSync(temp);
+      } catch {
+        // best effort
+      }
     }
     throw new TraillineError(`could not write ${reportPath}: ${error.message}`);
   }
