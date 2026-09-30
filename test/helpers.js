@@ -6,12 +6,13 @@ import { fileURLToPath } from "node:url";
 import { main } from "../src/cli.js";
 
 /** Run the CLI in-process and collect everything it printed. */
-export async function runCli(argv) {
+export async function runCli(argv, { color } = {}) {
   const out = [];
   const err = [];
   const code = await main(argv, {
     out: (text) => out.push(text),
     err: (text) => err.push(text),
+    color,
   });
   return { code, out: out.join("\n"), err: err.join("\n") };
 }

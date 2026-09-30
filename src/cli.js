@@ -7,6 +7,7 @@ import { topLevelHelp, versionLine } from "./help.js";
 const defaultIo = {
   out: (text) => console.log(text),
   err: (text) => console.error(text),
+  color: process.stdout.isTTY === true,
 };
 
 const HELP_FLAGS = new Set(["-h", "--help"]);

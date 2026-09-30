@@ -84,6 +84,8 @@ describe("per command parsing", () => {
       assert.match(err, new RegExp(`trailline ${command.name} --help`));
     });
 
+    if (command.name === "check") continue;
+
     it(`${command.name} reports that it is not built yet`, async () => {
       const { code, err } = await runCli([command.name]);
       assert.equal(code, EXIT_FAILED);

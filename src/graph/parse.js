@@ -160,7 +160,8 @@ function readJsonFile(path) {
   return parseGraphText(readText(path, "graph file"), { label: display(path) });
 }
 
-function readText(path, what) {
+/** Read a file as text; failures become `TraillineError`s worded for the builder. */
+export function readText(path, what) {
   try {
     return readFileSync(path, "utf8");
   } catch (error) {
