@@ -5,6 +5,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
+  CLEAN_F3_SQL,
   CLEAN_SQL,
   loadFixture,
   MESSY_SQL,
@@ -14,6 +15,8 @@ import {
 
 const REFUSED = (name) =>
   `trailline: ${name} does not pass \`trailline check\`, so no script was composed`;
+const NO_NODE =
+  "trailline: no node `f9` in r.html\nTry `trailline sql --help`.";
 const R0 =
   "<html><head><title>r</title></head><body><p>Hello.</p></body></html>";
 
@@ -172,5 +175,93 @@ describe("sql: fixtures", () => {
     assert.equal(code, 1);
     assert.equal(out, "");
     assert.equal(err, REFUSED("churn-drivers.html"));
+  });
+});
+
+describe("sql: one node", () => {
+  it("prints the script for one node", async (t) => {
+    const { path } = report(t, R_F1, G1);
+    const { code, out, err } = await runCli(["sql", path, "--id", "f1"]);
+    assert.equal(code, 0);
+    assert.equal(out, ONE.replace("-- r.html", "-- r.html (f1)"));
+    assert.equal(err, "");
+  });
+
+  it("exits 2 on an id that is not in the graph", async (t) => {
+    const { path } = report(t, R_F1, G1);
+    const { code, out, err } = await runCli(["sql", path, "--id", "f9"]);
+    assert.equal(code, 2);
+    assert.equal(out, "");
+    assert.equal(err, NO_NODE);
+  });
+
+  it("exits 2 on an id when the graph has no nodes", async (t) => {
+    const { path } = report(t, R_F1, { trailline: "1.0" });
+    const { code, out, err } = await runCli(["sql", path, "--id", "q1"]);
+    assert.equal(code, 2);
+    assert.equal(out, "");
+    assert.equal(err, NO_NODE.replace("f9", "q1"));
+  });
+
+  it("exits 2 when --id is given twice", async (t) => {
+    const { path } = report(t, R_F1, G1);
+    const { code, out, err } = await runCli([
+      "sql",
+      path,
+      "--id",
+      "f1",
+      "--id",
+      "q1",
+    ]);
+    assert.equal(code, 2);
+    assert.equal(out, "");
+    assert.equal(
+      err,
+      "trailline: expected one --id, got 2\nTry `trailline sql --help`.",
+    );
+  });
+
+  it("refuses a failing report even when the error is outside the node's chain", async (t) => {
+    const { path } = report(t, R0, G1);
+    const { code, out, err } = await runCli(["sql", path, "--id", "q1"]);
+    assert.equal(code, 1);
+    assert.equal(out, "");
+    assert.equal(err, REFUSED("r.html"));
+  });
+
+  it("reports an unknown id before refusing a failing report", async (t) => {
+    const { path } = report(t, R0, G1);
+    const { code, out, err } = await runCli(["sql", path, "--id", "f9"]);
+    assert.equal(code, 2);
+    assert.equal(out, "");
+    assert.equal(err, NO_NODE);
+  });
+
+  it("prints clean's f3", async () => {
+    const { reportPath } = loadFixture("clean");
+    const before = readFileSync(reportPath, "utf8");
+    const { code, out, err } = await runCli(["sql", reportPath, "--id", "f3"]);
+    assert.equal(code, 0);
+    assert.equal(out, CLEAN_F3_SQL);
+    assert.equal(err, "");
+    assert.equal(readFileSync(reportPath, "utf8"), before);
+  });
+
+  it("refuses broken, whichever node is asked for", async () => {
+    const { code, out, err } = await runCli([
+      "sql",
+      loadFixture("broken").reportPath,
+      "--id",
+      "q1",
+    ]);
+    assert.equal(code, 1);
+    assert.equal(out, "");
+    assert.equal(err, REFUSED("churn-drivers.html"));
+  });
+
+  it("lists --id in its help", async () => {
+    const { code, out } = await runCli(["sql", "--help"]);
+    assert.equal(code, 0);
+    assert.ok(out.includes("--id <node>"));
   });
 });

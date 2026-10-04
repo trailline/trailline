@@ -196,3 +196,174 @@ select 'f4', 'Site sessions, last 30 days', cast((select value from f4) as varch
 -- i2 ungrounded: Industry benchmarks put paid search cost per customer around $50.
 -- i3 ungrounded: Creative fatigue on the summer campaign is the likely driver.
 -- i4 ungrounded: Costs should ease in September once the new creative is live.`;
+
+/** The scripts for one node of the clean and messy fixtures. */
+export const CLEAN_F3_SQL = `-- august-retention.html (f3)
+with
+q1 as (
+    -- 30-day retention inputs by channel, region and cohort month, Jan to Aug 2026
+    select
+        channel,
+        region,
+        cohort_month,
+        cohort_customers,
+        retained_30d
+    from marts.retention_by_channel
+    where cohort_month between '2026-01-01' and '2026-08-31'
+),
+v1 as (
+    -- Monthly 30-day retention by channel, with each channel's rank in its month
+    select
+        channel,
+        cohort_month,
+        sum(retained_30d) / sum(cohort_customers) as retention,
+        rank() over (
+            partition by cohort_month
+            order by sum(retained_30d) / sum(cohort_customers) desc
+        ) as retention_rank
+    from q1
+    group by channel, cohort_month
+),
+f1 (value) as (
+    select retention
+    from v1
+    where channel = 'paid_social'
+      and cohort_month = '2026-08-01'
+),
+f2 (value) as (
+    select retention
+    from v1
+    where channel = 'paid_social'
+      and cohort_month = '2026-07-01'
+)
+select 'f1' as figure, 'Paid social retention, August' as label, cast((select value from f1) as varchar) as value
+union all
+select 'f2', 'Paid social retention, July', cast((select value from f2) as varchar)
+union all
+select 'f3', 'Change in paid social retention, August vs July', cast(((select value from f1) - (select value from f2)) / (select value from f2) as varchar)`;
+
+export const CLEAN_I3_SQL = `-- august-retention.html (i3)
+with
+q1 as (
+    -- 30-day retention inputs by channel, region and cohort month, Jan to Aug 2026
+    select
+        channel,
+        region,
+        cohort_month,
+        cohort_customers,
+        retained_30d
+    from marts.retention_by_channel
+    where cohort_month between '2026-01-01' and '2026-08-31'
+),
+q2 as (
+    -- New customers by channel, August 2026
+    select
+        channel,
+        signup_month,
+        new_customers
+    from marts.acquisition_by_channel
+    where signup_month between '2026-08-01' and '2026-08-31'
+),
+v1 as (
+    -- Monthly 30-day retention by channel, with each channel's rank in its month
+    select
+        channel,
+        cohort_month,
+        sum(retained_30d) / sum(cohort_customers) as retention,
+        rank() over (
+            partition by cohort_month
+            order by sum(retained_30d) / sum(cohort_customers) desc
+        ) as retention_rank
+    from q1
+    group by channel, cohort_month
+),
+v2 as (
+    -- August new customers and 30-day retention by channel
+    select
+        q2.channel,
+        q2.new_customers,
+        sum(q1.retained_30d) / sum(q1.cohort_customers) as retention
+    from q2
+    join q1
+        on q1.channel = q2.channel
+        and q1.cohort_month = q2.signup_month
+    group by q2.channel, q2.new_customers
+    order by retention desc
+),
+f1 (value) as (
+    select retention
+    from v1
+    where channel = 'paid_social'
+      and cohort_month = '2026-08-01'
+),
+f2 (value) as (
+    select retention
+    from v1
+    where channel = 'paid_social'
+      and cohort_month = '2026-07-01'
+),
+f4 (value) as (
+    select retention_rank
+    from v1
+    where channel = 'paid_social'
+      and cohort_month = '2026-08-01'
+),
+f5 (value) as (
+    select customer_share
+    from (
+        select
+            channel,
+            new_customers / sum(new_customers) over () as customer_share
+        from v2
+    ) as shares
+    where channel = 'paid_social'
+)
+select 'f1' as figure, 'Paid social retention, August' as label, cast((select value from f1) as varchar) as value
+union all
+select 'f2', 'Paid social retention, July', cast((select value from f2) as varchar)
+union all
+select 'f3', 'Change in paid social retention, August vs July', cast(((select value from f1) - (select value from f2)) / (select value from f2) as varchar)
+union all
+select 'f4', 'Paid social''s retention rank among channels, August', cast((select value from f4) as varchar)
+union all
+select 'f5', 'Paid social share of August new customers', cast((select value from f5) as varchar)`;
+
+export const MESSY_F3_SQL = `-- paid-search-costs.html (f3)
+with
+q1 as (
+    -- New customers and spend by channel, August 2026
+    select
+        channel,
+        signup_month,
+        new_customers,
+        spend
+    from marts.acquisition_by_channel
+    where signup_month between '2026-08-01' and '2026-08-31'
+),
+v1 as (
+    -- August new customers, spend and cost per new customer by channel
+    select
+        channel,
+        new_customers,
+        spend,
+        spend / new_customers as cost_per_customer
+    from q1
+    order by cost_per_customer desc
+),
+f1 (value) as (
+    select cost_per_customer
+    from v1
+    where channel = 'paid_search'
+),
+f2 (value) as (
+    -- from the report: rests on external t1
+    select 55
+)
+select 'f1' as figure, 'Paid search cost per new customer, August' as label, cast((select value from f1) as varchar) as value
+union all
+select 'f2', null, cast((select value from f2) as varchar)
+union all
+select 'f3', 'Paid search cost over target, August', cast(((select value from f1) - (select value from f2)) / (select value from f2) as varchar)
+
+-- not covered by this script:
+-- t1 external: q3-targets.csv`;

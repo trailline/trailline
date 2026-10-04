@@ -52,18 +52,75 @@ function compiler(nodes) {
 
 /**
  * @param {object} graph a graph with no error-severity issues
- * @param {{ report: string }} options `report` is the file name for the header
+ * @param {{ report: string, id?: string }} options `report` is the file name
+ *   for the header; `id` limits the script to that node and what is below it
  * @returns {string} the script, with no trailing newline
  */
 export function composeSql(graph, options) {
   const report = oneLine(options.report);
-  const entries = Object.entries(graph.nodes);
+  const header =
+    options.id === undefined ? report : `${report} (${options.id})`;
+  // The node and everything below it through `from`; the whole graph without an id.
+  const scope = new Set();
+  const collect = (id) => {
+    if (scope.has(id)) return;
+    scope.add(id);
+    (graph.nodes[id].from ?? []).forEach(collect);
+  };
+  if (options.id === undefined) Object.keys(graph.nodes).forEach(collect);
+  else collect(options.id);
+  const entries = Object.entries(graph.nodes).filter(([id]) => scope.has(id));
   const figures = entries.filter(([, node]) => node.step === "figure");
-  if (figures.length === 0) {
-    return `-- ${report}\n-- no figures, so there is nothing to compose`;
+  const notCovered = entries.flatMap(([id, node]) => {
+    if (node.kind === "external") {
+      const ref = oneLine(node.ref ?? "");
+      return [ref ? `-- ${id} external: ${ref}` : `-- ${id} external`];
+    }
+    if (node.ungrounded) {
+      const text = oneLine(node.text ?? node.label ?? "");
+      return [text ? `-- ${id} ungrounded: ${text}` : `-- ${id} ungrounded`];
+    }
+    return [];
+  });
+  const tail =
+    notCovered.length > 0
+      ? `\n\n-- not covered by this script:\n${notCovered.join("\n")}`
+      : "";
+  // External sources anywhere below a node, in graph order.
+  const externalsBelow = (id) => {
+    const below = new Set();
+    const walk = (parent) => {
+      if (graph.nodes[parent].kind === "external") below.add(parent);
+      (graph.nodes[parent].from ?? []).forEach(walk);
+    };
+    walk(id);
+    return entries.map(([other]) => other).filter((other) => below.has(other));
+  };
+  const target = graph.nodes[options.id];
+  const states = traceGraph(graph);
+  // A source or view with SQL to run ends in a select of itself.
+  const selectsTarget =
+    (target?.step === "source" || target?.step === "view") &&
+    states.get(options.id) === "full";
+  if (figures.length === 0 && !selectsTarget) {
+    const { id } = options;
+    const externals = id === undefined ? [] : externalsBelow(id);
+    const ungrounded = entries
+      .filter(([, node]) => node.ungrounded)
+      .map(([other]) => other);
+    let why = `${id} rests on no figures`;
+    if (id === undefined) why = "no figures";
+    else if (target.kind === "external") {
+      why = `${id} is external (${oneLine(target.ref ?? "")})`;
+    } else if (target.ungrounded) why = `${id} is ungrounded`;
+    else if (externals.length > 0) {
+      why = `${id} rests on external ${externals.join(", ")}`;
+    } else if (ungrounded.length > 0) {
+      why = `${id} rests on ungrounded ${ungrounded.join(", ")}`;
+    }
+    return `-- ${header}\n-- ${why}, so there is nothing to compose${tail}`;
   }
   const compile = compiler(graph.nodes);
-  const states = traceGraph(graph);
   const ofStep = (step) => entries.filter(([, node]) => node.step === step);
   const views = [];
   const visit = ([id, node]) => {
@@ -82,16 +139,6 @@ export function composeSql(graph, options) {
   const ctes = [...sqlSources, ...views].map(
     ([id, node]) => `${id} as (\n${indent(node.sql)}\n)`,
   );
-  // External sources anywhere below a node, in graph order.
-  const externalsBelow = (id) => {
-    const below = new Set();
-    const walk = (parent) => {
-      if (graph.nodes[parent].kind === "external") below.add(parent);
-      (graph.nodes[parent].from ?? []).forEach(walk);
-    };
-    walk(id);
-    return entries.map(([other]) => other).filter((other) => below.has(other));
-  };
   // A sql figure with no CTE cannot be read: its value is null.
   const unread = new Set();
   for (const [id, node] of figures.filter(([, node]) => node.sql)) {
@@ -124,21 +171,9 @@ export function composeSql(graph, options) {
       ? `select ${figure} as figure, ${label} as label, ${value} as value`
       : `select ${figure}, ${label}, ${value}`;
   });
-  const notCovered = entries.flatMap(([id, node]) => {
-    if (node.kind === "external") {
-      const ref = oneLine(node.ref ?? "");
-      return [ref ? `-- ${id} external: ${ref}` : `-- ${id} external`];
-    }
-    if (node.ungrounded) {
-      const text = oneLine(node.text ?? node.label ?? "");
-      return [text ? `-- ${id} ungrounded: ${text}` : `-- ${id} ungrounded`];
-    }
-    return [];
-  });
-  const tail =
-    notCovered.length > 0
-      ? `\n\n-- not covered by this script:\n${notCovered.join("\n")}`
-      : "";
+  const final = selectsTarget
+    ? `select * from ${options.id}`
+    : rows.join("\nunion all\n");
   const withClause = ctes.length > 0 ? `with\n${ctes.join(",\n")}\n` : "";
-  return `-- ${report}\n${withClause}${rows.join("\nunion all\n")}${tail}`;
+  return `-- ${header}\n${withClause}${final}${tail}`;
 }
