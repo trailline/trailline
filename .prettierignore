@@ -2,3 +2,7 @@ node_modules/
 docs/
 package-lock.json
 test/fixtures/
+.claude/
+.impeccable/
+PRODUCT.md
+DESIGN.md
