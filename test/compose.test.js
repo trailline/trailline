@@ -3,7 +3,14 @@ import { describe, it } from "node:test";
 
 import { readGraph } from "../src/graph/parse.js";
 import { composeSql } from "../src/sql/compose.js";
-import { CLEAN_SQL, loadFixture, MESSY_SQL } from "./helpers.js";
+import {
+  CLEAN_F3_SQL,
+  CLEAN_I3_SQL,
+  CLEAN_SQL,
+  loadFixture,
+  MESSY_F3_SQL,
+  MESSY_SQL,
+} from "./helpers.js";
 
 const G = (nodes) => ({ trailline: "1.0", nodes });
 const compose = (graph) => composeSql(graph, { report: "r.html" });
@@ -38,6 +45,7 @@ const x1 = {
 };
 const NOT_COVERED = "\n\n-- not covered by this script:";
 const X1_LINE = "\n-- x1 external: targets.csv";
+const NO_SQL_LINE = "\n-- q1 has no sql";
 const fx = (from, value, label = "Target") => ({
   step: "figure",
   from: [from],
@@ -233,6 +241,15 @@ describe("not covered", () => {
   it("lists an external source in a trailing comment", () => {
     assert.equal(compose(G({ q1, f1, x1 })), ONE + NOT_COVERED + X1_LINE);
   });
+
+  it('keeps the list after "no figures" for the whole report', () => {
+    assert.equal(
+      compose(G({ q1, x1 })),
+      "-- r.html\n-- no figures, so there is nothing to compose" +
+        NOT_COVERED +
+        X1_LINE,
+    );
+  });
 });
 
 describe("external", () => {
@@ -317,6 +334,13 @@ describe("not covered", () => {
     assert.equal(
       compose(G({ q1, f1, x1: { ...x1, ref: "a.csv\nselect 1" } })),
       `${ONE}${NOT_COVERED}\n-- x1 external: a.csv select 1`,
+    );
+  });
+
+  it("gives a figure over a sql source with no query a null value and lists the source", () => {
+    assert.equal(
+      compose(G({ q1: { step: "source", kind: "sql" }, f1 })),
+      `-- r.html\nselect 'f1' as figure, 'Sales' as label, null as value${NOT_COVERED}${NO_SQL_LINE}`,
     );
   });
 
@@ -422,6 +446,268 @@ describe("not covered", () => {
     assert.equal(
       compose(G({ f1: loose({ value: 0.35, label: "Benchmark" }) })),
       `-- r.html\nselect 'f1' as figure, 'Benchmark' as label, null as value${NOT_COVERED}\n-- f1 ungrounded: Benchmark`,
+    );
+  });
+});
+
+const one = (graph, id) => composeSql(graph, { report: "r.html", id });
+// The step 1 script with the header naming the node.
+const named = (script, id) => script.replace("-- r.html", `-- r.html (${id})`);
+// A node with nothing to run: the header, then why.
+const NOTHING = (id, why) =>
+  `-- r.html (${id})\n-- ${id} ${why}, so there is nothing to compose`;
+
+describe("composeSql: one node", () => {
+  it("names the node in the header", () => {
+    assert.equal(one(G({ q1, f1 }), "f1"), named(ONE, "f1"));
+  });
+
+  it("leaves out a figure that is not below the node", () => {
+    assert.equal(one(G({ q1, f1, f2 }), "f1"), named(ONE, "f1"));
+  });
+
+  it("leaves out sources and views that are not below the node", () => {
+    const graph = G({
+      q1,
+      q2: { step: "source", kind: "sql", sql: "select visits from web" },
+      v1: { step: "view", from: ["q2"], sql: "select visits from q2" },
+      f1,
+    });
+    assert.equal(one(graph, "f1"), named(ONE, "f1"));
+  });
+
+  it("gives an expression figure a row for each figure it is computed from", () => {
+    const graph = G({
+      q1,
+      f1,
+      f2,
+      f3: calc("f1 - f2", "Change"),
+      f4: fig("q1", "select max(amount) from q1", "Largest"),
+    });
+    assert.equal(
+      one(graph, "f3"),
+      named(TWO, "f3") +
+        "\nunion all\nselect 'f3', 'Change', cast((select value from f1) - (select value from f2) as varchar)",
+    );
+  });
+
+  it("gives an insight a row for each figure below it, through other insights", () => {
+    const graph = G({
+      q1,
+      f1,
+      f2,
+      i1: { step: "insight", from: ["f2"], text: "Orders rose." },
+      i2: {
+        step: "insight",
+        from: ["f1", "i1"],
+        text: "Sales and orders rose.",
+      },
+    });
+    assert.equal(one(graph, "i2"), named(TWO, "i2"));
+  });
+
+  it("ends a view's script by selecting the view", () => {
+    const graph = G({
+      q1,
+      v1: {
+        step: "view",
+        from: ["q1"],
+        sql: "select amount from q1 where amount > 0",
+      },
+      f1: fig("v1", "select sum(amount) from v1", "Sales"),
+    });
+    assert.equal(
+      one(graph, "v1"),
+      "-- r.html (v1)\nwith\nq1 as (\n    select amount from sales\n),\nv1 as (\n    select amount from q1 where amount > 0\n)\nselect * from v1",
+    );
+  });
+
+  it("ends a source's script by selecting the source", () => {
+    assert.equal(
+      one(G({ q1, f1 }), "q1"),
+      "-- r.html (q1)\nwith\nq1 as (\n    select amount from sales\n)\nselect * from q1",
+    );
+  });
+
+  it("lists only the external and ungrounded nodes in the chain", () => {
+    const graph = G({
+      q1,
+      f1,
+      x1,
+      x2: { ...x1, ref: "benchmarks.csv" },
+      f2: fx("x1", 0.5),
+      f3: loose({ label: "Benchmark" }),
+      i1: { step: "insight", from: [], ungrounded: true, text: "Unrelated." },
+      f4: {
+        step: "figure",
+        from: ["f2", "f3"],
+        expr: "f2 - f3",
+        label: "Gap",
+      },
+    });
+    assert.equal(
+      one(graph, "f4"),
+      "-- r.html (f4)\nwith\nf2 (value) as (\n    -- from the report: rests on external x1\n    select 0.5\n)\nselect 'f2' as figure, 'Target' as label, cast((select value from f2) as varchar) as value\nunion all\nselect 'f3', 'Benchmark', null\nunion all\nselect 'f4', 'Gap', null" +
+        NOT_COVERED +
+        X1_LINE +
+        "\n-- f3 ungrounded: Benchmark",
+    );
+  });
+
+  it("says why there is nothing to compose for an external source", () => {
+    assert.equal(
+      one(G({ q1, f1, x1 }), "x1"),
+      NOTHING("x1", "is external (targets.csv)") + NOT_COVERED + X1_LINE,
+    );
+  });
+
+  it("says an external source with no ref is external, without empty brackets", () => {
+    assert.equal(
+      one(G({ x1: { ...x1, ref: undefined } }), "x1"),
+      NOTHING("x1", "is external") + NOT_COVERED + "\n-- x1 external",
+    );
+  });
+
+  it("says why there is nothing to compose for a view over an external source", () => {
+    const graph = G({
+      q1,
+      x1,
+      v1: { step: "view", from: ["q1", "x1"], sql: "select amount from q1" },
+    });
+    assert.equal(
+      one(graph, "v1"),
+      NOTHING("v1", "rests on external x1") + NOT_COVERED + X1_LINE,
+    );
+  });
+
+  it("names every external source a view rests on", () => {
+    const graph = G({
+      x1,
+      x2: { ...x1, ref: "benchmarks.csv" },
+      v1: {
+        step: "view",
+        from: ["x1", "x2"],
+        sql: "select target from x1 join x2 using (channel)",
+      },
+    });
+    assert.equal(
+      one(graph, "v1"),
+      NOTHING("v1", "rests on external x1, x2") +
+        NOT_COVERED +
+        X1_LINE +
+        "\n-- x2 external: benchmarks.csv",
+    );
+  });
+
+  it("says why there is nothing to compose for an ungrounded insight", () => {
+    const graph = G({
+      q1,
+      f1,
+      i1: {
+        step: "insight",
+        from: [],
+        ungrounded: true,
+        text: "Benchmarks sit around 35%.",
+      },
+    });
+    assert.equal(
+      one(graph, "i1"),
+      NOTHING("i1", "is ungrounded") +
+        NOT_COVERED +
+        "\n-- i1 ungrounded: Benchmarks sit around 35%.",
+    );
+  });
+
+  it("says why there is nothing to compose for an insight over an ungrounded insight", () => {
+    const graph = G({
+      q1,
+      f1,
+      i1: {
+        step: "insight",
+        from: [],
+        ungrounded: true,
+        text: "Benchmarks sit around 35%.",
+      },
+      i2: { step: "insight", from: ["i1"], text: "So we lag." },
+    });
+    assert.equal(
+      one(graph, "i2"),
+      NOTHING("i2", "rests on ungrounded i1") +
+        NOT_COVERED +
+        "\n-- i1 ungrounded: Benchmarks sit around 35%.",
+    );
+  });
+
+  it("says why there is nothing to compose for a sql source with no query", () => {
+    const graph = G({ q1: { step: "source", kind: "sql" } });
+    assert.equal(
+      one(graph, "q1"),
+      NOTHING("q1", "has no sql") + NOT_COVERED + NO_SQL_LINE,
+    );
+  });
+
+  it("says why there is nothing to compose for a view over a sql source with no query", () => {
+    const graph = G({
+      q1: { step: "source", kind: "sql" },
+      v1: { step: "view", from: ["q1"], sql: "select amount from q1" },
+    });
+    assert.equal(
+      one(graph, "v1"),
+      NOTHING("v1", "rests on q1, which has no sql") +
+        NOT_COVERED +
+        NO_SQL_LINE,
+    );
+  });
+
+  it("says when an insight rests on no figures", () => {
+    const graph = G({
+      q1,
+      f1,
+      i1: { step: "insight", from: [], text: "Sales rose." },
+    });
+    assert.equal(one(graph, "i1"), NOTHING("i1", "rests on no figures"));
+  });
+});
+
+describe("composeSql: one node of a fixture", () => {
+  const fixture = (name, report, id) =>
+    composeSql(readGraph({ reportPath: loadFixture(name).reportPath }).graph, {
+      report,
+      id,
+    });
+
+  it("composes clean's f3", () => {
+    assert.equal(fixture("clean", "august-retention.html", "f3"), CLEAN_F3_SQL);
+  });
+
+  it("composes clean's i3", () => {
+    assert.equal(fixture("clean", "august-retention.html", "i3"), CLEAN_I3_SQL);
+  });
+
+  it("composes clean's v2", () => {
+    const ctes = ["q1", "q2", "v2"].map(
+      (id) =>
+        CLEAN_SQL.match(
+          new RegExp(`^${id} as \\(\\n.*?\\n\\)(?=,\\n|\\n)`, "ms"),
+        )[0],
+    );
+    assert.equal(
+      fixture("clean", "august-retention.html", "v2"),
+      `-- august-retention.html (v2)\nwith\n${ctes.join(",\n")}\nselect * from v2`,
+    );
+  });
+
+  it("composes messy's f3", () => {
+    assert.equal(
+      fixture("messy", "paid-search-costs.html", "f3"),
+      MESSY_F3_SQL,
+    );
+  });
+
+  it("composes messy's ungrounded i2", () => {
+    assert.equal(
+      fixture("messy", "paid-search-costs.html", "i2"),
+      "-- paid-search-costs.html (i2)\n-- i2 is ungrounded, so there is nothing to compose\n\n-- not covered by this script:\n-- i2 ungrounded: Industry benchmarks put paid search cost per customer around $50.",
     );
   });
 });
