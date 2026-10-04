@@ -45,6 +45,7 @@ const x1 = {
 };
 const NOT_COVERED = "\n\n-- not covered by this script:";
 const X1_LINE = "\n-- x1 external: targets.csv";
+const NO_SQL_LINE = "\n-- q1 has no sql";
 const fx = (from, value, label = "Target") => ({
   step: "figure",
   from: [from],
@@ -336,6 +337,13 @@ describe("not covered", () => {
     );
   });
 
+  it("gives a figure over a sql source with no query a null value and lists the source", () => {
+    assert.equal(
+      compose(G({ q1: { step: "source", kind: "sql" }, f1 })),
+      `-- r.html\nselect 'f1' as figure, 'Sales' as label, null as value${NOT_COVERED}${NO_SQL_LINE}`,
+    );
+  });
+
   it("lists an external source with no ref by id alone", () => {
     assert.equal(
       compose(G({ q1, f1, x1: { ...x1, ref: undefined } })),
@@ -553,6 +561,13 @@ describe("composeSql: one node", () => {
     );
   });
 
+  it("says an external source with no ref is external, without empty brackets", () => {
+    assert.equal(
+      one(G({ x1: { ...x1, ref: undefined } }), "x1"),
+      NOTHING("x1", "is external") + NOT_COVERED + "\n-- x1 external",
+    );
+  });
+
   it("says why there is nothing to compose for a view over an external source", () => {
     const graph = G({
       q1,
@@ -620,6 +635,27 @@ describe("composeSql: one node", () => {
       NOTHING("i2", "rests on ungrounded i1") +
         NOT_COVERED +
         "\n-- i1 ungrounded: Benchmarks sit around 35%.",
+    );
+  });
+
+  it("says why there is nothing to compose for a sql source with no query", () => {
+    const graph = G({ q1: { step: "source", kind: "sql" } });
+    assert.equal(
+      one(graph, "q1"),
+      NOTHING("q1", "has no sql") + NOT_COVERED + NO_SQL_LINE,
+    );
+  });
+
+  it("says why there is nothing to compose for a view over a sql source with no query", () => {
+    const graph = G({
+      q1: { step: "source", kind: "sql" },
+      v1: { step: "view", from: ["q1"], sql: "select amount from q1" },
+    });
+    assert.equal(
+      one(graph, "v1"),
+      NOTHING("v1", "rests on q1, which has no sql") +
+        NOT_COVERED +
+        NO_SQL_LINE,
     );
   });
 

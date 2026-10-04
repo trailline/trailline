@@ -203,6 +203,23 @@ describe("sql: one node", () => {
     assert.equal(err, NO_NODE.replace("f9", "q1"));
   });
 
+  it("exits 2 on an id when the graph is null", async (t) => {
+    const { dir, path } = report(t, R_F1, G1);
+    const other = join(dir, "null.json");
+    writeFileSync(other, "null");
+    const { code, out, err } = await runCli([
+      "sql",
+      path,
+      "--graph",
+      other,
+      "--id",
+      "q1",
+    ]);
+    assert.equal(code, 2);
+    assert.equal(out, "");
+    assert.equal(err, NO_NODE.replace("f9", "q1"));
+  });
+
   it("exits 2 when --id is given twice", async (t) => {
     const { path } = report(t, R_F1, G1);
     const { code, out, err } = await runCli([

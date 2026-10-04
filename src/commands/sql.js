@@ -48,7 +48,7 @@ export async function run(parsed, io) {
   const reportPath = positionals[0];
   const { graph } = readGraph({ reportPath, graphPath: parsed.values.graph });
   const [id] = ids;
-  if (id !== undefined && !Object.hasOwn(graph.nodes ?? {}, id)) {
+  if (id !== undefined && !Object.hasOwn(graph?.nodes ?? {}, id)) {
     throw new UsageError(`no node \`${id}\` in ${basename(reportPath)}`, {
       command: name,
     });

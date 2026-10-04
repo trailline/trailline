@@ -71,7 +71,11 @@ export function composeSql(graph, options) {
   else collect(options.id);
   const entries = Object.entries(graph.nodes).filter(([id]) => scope.has(id));
   const figures = entries.filter(([, node]) => node.step === "figure");
+  // A sql source whose query was never recorded cannot run.
+  const noSql = (node) =>
+    node.step === "source" && node.kind === "sql" && node.sql === undefined;
   const notCovered = entries.flatMap(([id, node]) => {
+    if (noSql(node)) return [`-- ${id} has no sql`];
     if (node.kind === "external") {
       const ref = oneLine(node.ref ?? "");
       return [ref ? `-- ${id} external: ${ref}` : `-- ${id} external`];
@@ -86,35 +90,43 @@ export function composeSql(graph, options) {
     notCovered.length > 0
       ? `\n\n-- not covered by this script:\n${notCovered.join("\n")}`
       : "";
-  // External sources anywhere below a node, in graph order.
-  const externalsBelow = (id) => {
+  // Sources anywhere below a node that pass `test`, in graph order.
+  const sourcesBelow = (id, test) => {
     const below = new Set();
     const walk = (parent) => {
-      if (graph.nodes[parent].kind === "external") below.add(parent);
+      if (test(graph.nodes[parent])) below.add(parent);
       (graph.nodes[parent].from ?? []).forEach(walk);
     };
     walk(id);
     return entries.map(([other]) => other).filter((other) => below.has(other));
   };
-  const target = graph.nodes[options.id];
+  const externalsBelow = (id) =>
+    sourcesBelow(id, (node) => node.kind === "external");
   const states = traceGraph(graph);
+  const runs = (id) =>
+    states.get(id) === "full" && sourcesBelow(id, noSql).length === 0;
+  const target = graph.nodes[options.id];
   // A source or view with SQL to run ends in a select of itself.
   const selectsTarget =
-    (target?.step === "source" || target?.step === "view") &&
-    states.get(options.id) === "full";
+    (target?.step === "source" || target?.step === "view") && runs(options.id);
   if (figures.length === 0 && !selectsTarget) {
     const { id } = options;
     const externals = id === undefined ? [] : externalsBelow(id);
     const ungrounded = entries
       .filter(([, node]) => node.ungrounded)
       .map(([other]) => other);
+    const missing = id === undefined ? [] : sourcesBelow(id, noSql);
+    const ref = oneLine(target?.ref ?? "");
     let why = `${id} rests on no figures`;
     if (id === undefined) why = "no figures";
     else if (target.kind === "external") {
-      why = `${id} is external (${oneLine(target.ref ?? "")})`;
+      why = ref ? `${id} is external (${ref})` : `${id} is external`;
     } else if (target.ungrounded) why = `${id} is ungrounded`;
+    else if (noSql(target)) why = `${id} has no sql`;
     else if (externals.length > 0) {
       why = `${id} rests on external ${externals.join(", ")}`;
+    } else if (missing.length > 0) {
+      why = `${id} rests on ${missing.join(", ")}, which ${missing.length > 1 ? "have" : "has"} no sql`;
     } else if (ungrounded.length > 0) {
       why = `${id} rests on ungrounded ${ungrounded.join(", ")}`;
     }
@@ -133,9 +145,9 @@ export function composeSql(graph, options) {
     views.push([id, node]);
   };
   ofStep("view")
-    .filter(([id]) => states.get(id) === "full")
+    .filter(([id]) => runs(id))
     .forEach(visit);
-  const sqlSources = ofStep("source").filter(([, node]) => node.kind === "sql");
+  const sqlSources = ofStep("source").filter(([id]) => runs(id));
   const ctes = [...sqlSources, ...views].map(
     ([id, node]) => `${id} as (\n${indent(node.sql)}\n)`,
   );
@@ -143,7 +155,7 @@ export function composeSql(graph, options) {
   const unread = new Set();
   for (const [id, node] of figures.filter(([, node]) => node.sql)) {
     const externals = externalsBelow(id);
-    if (states.get(id) === "full") {
+    if (runs(id)) {
       ctes.push(`${id} (value) as (\n${indent(node.sql)}\n)`);
     } else if (externals.length > 0 && !node.ungrounded) {
       ctes.push(
