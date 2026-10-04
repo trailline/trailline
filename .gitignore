@@ -2,3 +2,6 @@ node_modules/
 docs/
 .env
 .claude/
+PRODUCT.md
+DESIGN.md
+.impeccable/

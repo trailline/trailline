@@ -33,6 +33,6 @@ export default [
     },
   },
   {
-    ignores: ["node_modules/", "docs/"],
+    ignores: ["node_modules/", "docs/", ".claude/"],
   },
 ];
