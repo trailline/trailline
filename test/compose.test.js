@@ -320,6 +320,20 @@ describe("not covered", () => {
     );
   });
 
+  it("lists an external source with no ref by id alone", () => {
+    assert.equal(
+      compose(G({ q1, f1, x1: { ...x1, ref: undefined } })),
+      `${ONE}${NOT_COVERED}\n-- x1 external`,
+    );
+  });
+
+  it("writes the report name in the header on one line", () => {
+    assert.equal(
+      composeSql(G({ q1, f1 }), { report: "r\nselect 1.html" }),
+      ONE.replace("-- r.html", "-- r select 1.html"),
+    );
+  });
+
   it("lists an ungrounded insight with its text on one line", () => {
     assert.equal(
       compose(

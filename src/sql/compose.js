@@ -5,6 +5,9 @@
 import { exprRefs, parseExpr } from "../graph/expr.js";
 import { traceGraph } from "../graph/trace.js";
 
+/** Text collapsed to one line, so it cannot end a `--` comment early. */
+const oneLine = (text) => text.replace(/\s+/g, " ").trim();
+
 const quote = (text) => `'${text.replaceAll("'", "''")}'`;
 
 /** A recorded value as a SQL literal: number as written, string quoted, else null. */
@@ -52,7 +55,8 @@ function compiler(nodes) {
  * @param {{ report: string }} options `report` is the file name for the header
  * @returns {string} the script, with no trailing newline
  */
-export function composeSql(graph, { report }) {
+export function composeSql(graph, options) {
+  const report = oneLine(options.report);
   const entries = Object.entries(graph.nodes);
   const figures = entries.filter(([, node]) => node.step === "figure");
   if (figures.length === 0) {
@@ -120,10 +124,10 @@ export function composeSql(graph, { report }) {
       ? `select ${figure} as figure, ${label} as label, ${value} as value`
       : `select ${figure}, ${label}, ${value}`;
   });
-  const oneLine = (text) => text.replace(/\s+/g, " ").trim();
   const notCovered = entries.flatMap(([id, node]) => {
     if (node.kind === "external") {
-      return [`-- ${id} external: ${oneLine(node.ref)}`];
+      const ref = oneLine(node.ref ?? "");
+      return [ref ? `-- ${id} external: ${ref}` : `-- ${id} external`];
     }
     if (node.ungrounded) {
       const text = oneLine(node.text ?? node.label ?? "");
