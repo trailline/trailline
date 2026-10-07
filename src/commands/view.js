@@ -1,4 +1,10 @@
-import { NotImplementedError } from "../errors.js";
+import { basename } from "node:path";
+
+import { UsageError } from "../errors.js";
+import { buildPayload } from "../viewer/payload.js";
+import { browserCommand, openBrowser, startServer } from "../viewer/server.js";
+
+const DEFAULT_PORT = 7171;
 
 export const name = "view";
 export const summary = "Serve the report beside its lineage";
@@ -23,6 +29,51 @@ export const options = {
   graph: { type: "string" },
 };
 
-export async function run(_parsed) {
-  throw new NotImplementedError(name);
+export async function run(parsed, io) {
+  const { positionals } = parsed;
+  if (positionals.length === 0) {
+    throw new UsageError("missing the report to view", { command: name });
+  }
+  if (positionals.length > 1) {
+    throw new UsageError(`expected one report, got ${positionals.length}`, {
+      command: name,
+    });
+  }
+  const { port } = parsed.values;
+  if (port !== undefined && !(/^\d+$/.test(port) && Number(port) <= 65535)) {
+    throw new UsageError(
+      `--port must be a whole number from 0 to 65535, got \`${port}\``,
+      { command: name },
+    );
+  }
+  const reportPath = positionals[0];
+  const graphPath = parsed.values.graph;
+  // Read everything once before listening: an unreadable graph exits 1
+  // without ever printing a URL.
+  buildPayload({ reportPath, graphPath });
+  const server = await startServer({
+    reportPath,
+    graphPath,
+    port: port === undefined ? DEFAULT_PORT : Number(port),
+    exact: port !== undefined,
+  });
+  io.out(`Serving ${basename(reportPath)} at ${server.url}`);
+  io.out("Press Ctrl-C to stop.");
+  if (!parsed.values["no-open"]) {
+    const open =
+      io.open ?? ((url) => openBrowser(browserCommand(process.platform, url)));
+    // A browser that will not open is not an error: the URL is printed.
+    open(server.url);
+  }
+  await stopped(io.signal);
+  await server.close();
+  return 0;
+}
+
+/** Resolves when `signal` aborts; without one, on the first Ctrl-C. */
+function stopped(signal) {
+  return new Promise((resolve) => {
+    if (signal === undefined) return process.once("SIGINT", resolve);
+    signal.addEventListener("abort", resolve, { once: true });
+  });
 }

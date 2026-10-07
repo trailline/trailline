@@ -84,7 +84,7 @@ describe("per command parsing", () => {
       assert.match(err, new RegExp(`trailline ${command.name} --help`));
     });
 
-    if (command.name === "check" || command.name === "sql") continue;
+    if (["check", "sql", "view"].includes(command.name)) continue;
 
     it(`${command.name} reports that it is not built yet`, async () => {
       const { code, err } = await runCli([command.name]);
