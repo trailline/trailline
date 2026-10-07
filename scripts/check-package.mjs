@@ -33,6 +33,7 @@ const REQUIRED = [
   "src/html/page.js",
   "src/sql/compose.js",
   "src/sql/style.js",
+  "src/viewer/payload.js",
   "src/check/rules.js",
   "src/check/summary.js",
   "package.json",

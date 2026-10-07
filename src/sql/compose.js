@@ -50,6 +50,16 @@ function compiler(nodes) {
   return compile;
 }
 
+/** Why a report that fails `check` gets no script. */
+export const refusal = (report) =>
+  `${report} does not pass \`trailline check\`, so no script was composed`;
+
+const NOTHING = ", so there is nothing to compose";
+
+/** Whether `script`, from `composeSql`, says there was nothing to compose. */
+export const isEmptyScript = (script) =>
+  script.split("\n")[1].endsWith(NOTHING);
+
 /**
  * @param {object} graph a graph with no error-severity issues
  * @param {{ report: string, id?: string }} options `report` is the file name
@@ -130,7 +140,7 @@ export function composeSql(graph, options) {
     } else if (ungrounded.length > 0) {
       why = `${id} rests on ungrounded ${ungrounded.join(", ")}`;
     }
-    return `-- ${header}\n-- ${why}, so there is nothing to compose${tail}`;
+    return `-- ${header}\n-- ${why}${NOTHING}${tail}`;
   }
   const compile = compiler(graph.nodes);
   const ofStep = (step) => entries.filter(([, node]) => node.step === step);
