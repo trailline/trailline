@@ -19,6 +19,20 @@ const nodeGlobals = {
   structuredClone: "readonly",
 };
 
+// Browser globals the viewer page uses (src/viewer/client/viewer.js).
+const browserGlobals = {
+  CSS: "readonly",
+  document: "readonly",
+  fetch: "readonly",
+  history: "readonly",
+  localStorage: "readonly",
+  location: "readonly",
+  matchMedia: "readonly",
+  navigator: "readonly",
+  setTimeout: "readonly",
+  clearTimeout: "readonly",
+};
+
 export default [
   js.configs.recommended,
   {
@@ -31,6 +45,10 @@ export default [
     rules: {
       "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
     },
+  },
+  {
+    files: ["src/viewer/client/**/*.js"],
+    languageOptions: { globals: browserGlobals },
   },
   {
     ignores: ["node_modules/", "docs/", ".claude/"],

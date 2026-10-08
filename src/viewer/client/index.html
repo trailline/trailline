@@ -1,10 +1,88 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="console-light">
   <head>
     <meta charset="utf-8" />
-    <title>Trailline</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trailline viewer</title>
+    <meta name="color-scheme" content="light dark" />
+    <link rel="stylesheet" href="/assets/viewer.css" />
+    <link rel="stylesheet" href="/assets/themes.css" />
+    <script>
+      // pick the mode before first paint: a saved choice, else the OS setting
+      (function () {
+        var m = null;
+        try {
+          m = localStorage.getItem("tl-mode");
+        } catch (e) {}
+        var h = /mode=(light|dark)/.exec(location.hash);
+        if (h) m = h[1];
+        if (!m)
+          m = matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
+        document.documentElement.dataset.theme =
+          m === "dark" ? "console" : "console-light";
+      })();
+    </script>
   </head>
   <body>
-    <p>Trailline viewer</p>
+    <div class="app">
+      <header class="rail">
+        <a
+          class="brand"
+          href="#"
+          aria-label="Trailline, report summary"
+          data-home
+        >
+          <svg viewBox="0 0 20 24" aria-hidden="true">
+            <path d="M8 1v22M12 1v22" />
+            <rect x="3.5" y="4" width="3" height="7" class="fill" />
+            <rect x="13.5" y="9" width="3" height="10" class="hatch" />
+          </svg>
+          <span>Trailline</span>
+        </a>
+        <span class="rail-report" id="reportName"></span>
+        <span class="rail-gap"></span>
+        <button
+          class="rail-btn mode-btn"
+          id="mode"
+          type="button"
+          aria-label="Switch light or dark mode"
+          title="Switch light or dark mode"
+        >
+          <svg class="moon" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M13.5 9.5A5.5 5.5 0 0 1 6.5 2.5a5.5 5.5 0 1 0 7 7Z" />
+          </svg>
+          <svg class="sun" viewBox="0 0 16 16" aria-hidden="true">
+            <circle cx="8" cy="8" r="3" />
+            <path
+              d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3 3l1 1M12 12l1 1M3 13l1-1M12 4l1-1"
+            />
+          </svg>
+        </button>
+        <button
+          class="rail-btn"
+          id="copyReport"
+          type="button"
+          aria-label="Copy report as SQL"
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <rect x="5" y="5" width="9" height="9" rx="1" />
+            <path d="M11 5V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h2" />
+          </svg>
+          <span>Copy report as SQL</span>
+        </button>
+      </header>
+      <main class="panes">
+        <iframe class="report" id="report" title="Report"></iframe>
+        <section
+          class="lineage"
+          id="lineage"
+          aria-label="Lineage"
+          tabindex="-1"
+        ></section>
+      </main>
+    </div>
+    <script type="module" src="/assets/viewer.js"></script>
   </body>
 </html>

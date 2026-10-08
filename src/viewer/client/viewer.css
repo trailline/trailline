@@ -1,0 +1,1363 @@
+/* Trailline viewer: every rule for the rail and the lineage panel. Colours
+   come from the Console tokens in themes.css, so both modes share one
+   rulebook. The report pane is never styled from here. */
+
+/* ---------- font: shipped with the package, never fetched ---------- */
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url("/assets/fonts/JetBrainsMono-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url("/assets/fonts/JetBrainsMono-Medium.woff2") format("woff2");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url("/assets/fonts/JetBrainsMono-SemiBold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url("/assets/fonts/JetBrainsMono-Bold.woff2") format("woff2");
+}
+
+:root {
+  --f-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --rail-h: 48px;
+  --nav-h: 46px;
+  --panel-w: 560px;
+  --gut: 24px; /* panel gutter */
+  --margin: 34px; /* step-number column */
+  --track: 30px; /* commit rail column */
+}
+
+/* ---------- base ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 13px/1.5 var(--f-mono);
+  font-variant-numeric: tabular-nums lining-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+::selection {
+  background: var(--sel);
+  color: var(--sel-ink);
+}
+button,
+select {
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+}
+code {
+  font: inherit;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+p,
+ul,
+h2 {
+  margin: 0;
+}
+ul {
+  padding: 0;
+  list-style: none;
+}
+svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--act);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+.muted {
+  color: var(--ink-3);
+}
+.gap {
+  flex: 1;
+}
+
+/* ---------- app frame ---------- */
+.app {
+  display: grid;
+  grid-template-rows: var(--rail-h) minmax(0, 1fr);
+  height: 100vh;
+  height: 100dvh;
+}
+
+.rail {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px 0 16px;
+  background: var(--rail-bg);
+  border-bottom: 1px solid var(--rule);
+  min-width: 0;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  text-decoration: none;
+  font: 700 13px/1 var(--f-mono);
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  padding: 6px 4px;
+  margin-left: -4px;
+  border-radius: 4px;
+}
+.brand svg {
+  width: 14px;
+  height: 17px;
+  stroke-width: 1.6;
+}
+.brand .fill {
+  fill: currentColor;
+  stroke: none;
+}
+.brand .hatch {
+  fill: currentColor;
+  stroke: none;
+  opacity: 0.4;
+}
+.rail-report {
+  color: var(--ink-3);
+  padding-left: 12px;
+  border-left: 1px solid var(--rule);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.rail-gap {
+  flex: 1;
+}
+
+.rail-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--rail-btn-bg);
+  color: var(--ink);
+  font: 500 12px/1 var(--f-mono);
+  white-space: nowrap;
+  transition:
+    background-color 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+.rail-btn svg {
+  width: 14px;
+  height: 14px;
+}
+.rail-btn:hover {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--on-act);
+}
+.rail-btn.done {
+  border-color: var(--ink);
+}
+.rail-btn:disabled {
+  color: var(--ink-3);
+  cursor: default;
+}
+.rail-btn:disabled:hover {
+  background: var(--rail-btn-bg);
+  border-color: var(--rule);
+  color: var(--ink-3);
+}
+.mode-btn {
+  width: 32px;
+  padding: 0;
+}
+.mode-btn .sun {
+  display: none;
+}
+[data-theme="console"] .mode-btn .sun {
+  display: block;
+}
+[data-theme="console"] .mode-btn .moon {
+  display: none;
+}
+
+.panes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--panel-w);
+  min-height: 0;
+}
+.report {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+}
+.lineage {
+  position: relative;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--paper);
+  border-left: 1px solid var(--rule);
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule) transparent;
+}
+.lineage::-webkit-scrollbar {
+  width: 10px;
+}
+.lineage::-webkit-scrollbar-thumb {
+  background: var(--rule);
+  border: 3px solid var(--paper);
+  border-radius: 4px;
+}
+.lineage:focus-visible {
+  outline: none;
+}
+
+/* ---------- shared pieces ---------- */
+.h {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font: 500 12px/1 var(--f-mono);
+  color: var(--ink-3);
+  margin-bottom: 12px;
+}
+.h::before {
+  content: "--";
+}
+.h small {
+  font: inherit;
+  color: var(--ink-2);
+}
+
+.kind {
+  font: 500 11.5px/1 var(--f-mono);
+  text-transform: lowercase;
+  color: var(--kw);
+  white-space: nowrap;
+}
+
+.id {
+  display: inline-block;
+  vertical-align: baseline;
+  border: 0;
+  border-radius: 3px;
+  padding: 1px 5px;
+  background: var(--act-wash);
+  color: var(--act);
+  font: 600 12.5px/1.35 var(--f-mono);
+  white-space: nowrap;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+button.id:hover {
+  background: var(--act);
+  color: var(--on-act);
+}
+.id.static {
+  background: var(--band);
+  color: var(--ink);
+  cursor: default;
+}
+.id.missing {
+  background: var(--stop-wash);
+  color: var(--stop-ink);
+}
+
+.sw {
+  display: inline-block;
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  vertical-align: 0;
+}
+.sw.full {
+  background: var(--node);
+}
+.sw.partial {
+  box-shadow: inset 0 0 0 1.5px var(--warn);
+}
+.sw.ungrounded {
+  box-shadow: inset 0 0 0 1.5px var(--stop);
+}
+.sw.warn {
+  background: var(--warn);
+}
+.sw.stopw {
+  background: var(--stop);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--act);
+  font: 500 12px/1 var(--f-mono);
+  white-space: nowrap;
+  transition:
+    background-color 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+.btn svg {
+  width: 14px;
+  height: 14px;
+}
+.btn:hover:not(:disabled) {
+  background: var(--act);
+  border-color: var(--act);
+  color: var(--on-act);
+}
+.btn:disabled {
+  color: var(--ink-3);
+  border-color: var(--rule);
+  cursor: default;
+}
+.btn.done,
+.btn.done:hover:not(:disabled) {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--act);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--act) 45%, transparent);
+  transition:
+    color 0.15s,
+    text-decoration-color 0.15s;
+}
+.link:hover {
+  color: var(--act-ink);
+  text-decoration-color: currentColor;
+}
+
+.stamp {
+  display: inline-block;
+  align-self: flex-start;
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+  padding: 3px 7px 2px;
+  font: 600 11px/1 var(--f-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.stamp.stop {
+  color: var(--stop);
+}
+.stamp.ext {
+  color: var(--ink);
+}
+
+/* ---------- nav ---------- */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--nav-h);
+  padding: 0 var(--gut) 0 calc(var(--gut) - 8px);
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 8px 0 4px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--act);
+  font: 500 12px/1 var(--f-mono);
+  transition: background-color 0.15s;
+}
+.back svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 1.8;
+}
+.back:hover {
+  background: var(--act-wash);
+}
+.nav .link {
+  font-size: 12px;
+}
+
+/* ---------- summary ---------- */
+.sec {
+  padding: 22px var(--gut) 20px;
+}
+.sec + .sec {
+  border-top: 1px solid var(--rule-soft);
+}
+.lede {
+  font: 600 22px/1.25 var(--f-mono);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.lede-sub {
+  margin-top: 8px;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.lede-sub:empty {
+  display: none;
+}
+
+/* the key: the four steps as a short commit rail, read upward */
+.key {
+  margin-top: 20px;
+}
+.key-row {
+  display: grid;
+  grid-template-columns: var(--margin) var(--track) minmax(0, 1fr);
+}
+.key-row .num {
+  font: 500 11.5px/1 var(--f-mono);
+  color: var(--ink-3);
+  text-align: right;
+  padding: 15px 6px 0 0;
+}
+.key-row .staff {
+  position: relative;
+}
+.key-row .staff::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--graph);
+}
+.key-row:first-child .staff::before {
+  top: 10px;
+}
+.key-row:last-child .staff::before {
+  bottom: 10px;
+}
+.key-row .bar {
+  position: absolute;
+  left: 11px;
+  top: 10px;
+  bottom: 10px;
+  width: 8px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 1px;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 0 0 3px var(--paper);
+  background: var(--paper);
+}
+.key-row .bar i {
+  display: block;
+  min-height: 3px;
+}
+.key-row .bar .full {
+  background: var(--node);
+}
+.key-row .bar .partial {
+  background: var(--warn);
+}
+.key-row .bar .ungrounded {
+  background: var(--stop);
+}
+.key-row .what {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 10px;
+  row-gap: 6px;
+  padding: 10px 0 11px 6px;
+  border-top: 1px solid var(--rule-soft);
+}
+.key-row:first-child .what {
+  border-top: 0;
+}
+.key-row .what b {
+  font: 600 18px/1 var(--f-mono);
+  letter-spacing: -0.02em;
+  color: var(--num);
+  min-width: 1.6ch;
+}
+.key-row .what .step-n {
+  font: 500 13px/1 var(--f-mono);
+  text-transform: lowercase;
+  margin-right: 6px;
+}
+.key-row .what .split {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  color: var(--ink-2);
+  font-size: 12px;
+}
+.key-row .what .split > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.key-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 12px;
+  padding-left: calc(var(--margin) + var(--track) + 6px);
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.key-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* needs attention */
+.attn {
+  margin: 0 calc(var(--gut) * -1);
+}
+.attn li + li {
+  border-top: 1px solid var(--rule-soft);
+}
+.attn button {
+  display: grid;
+  grid-template-columns: 9px auto minmax(0, 1fr);
+  align-items: start;
+  column-gap: 12px;
+  width: 100%;
+  padding: 12px var(--gut);
+  border: 0;
+  background: transparent;
+  text-align: left;
+  line-height: 1.6;
+  transition: background-color 0.12s;
+}
+.attn .sw {
+  margin-top: 6px;
+}
+.attn .id {
+  margin-top: 1px;
+}
+.attn .what {
+  color: var(--ink);
+  text-wrap: pretty;
+}
+.attn .what b {
+  color: var(--ink);
+}
+.attn .what code {
+  color: var(--ink);
+}
+.attn .tag {
+  font-weight: 600;
+}
+.attn .tag.stop {
+  color: var(--stop);
+}
+.attn .tag.warn,
+.attn .tag.ext {
+  color: var(--warn);
+}
+.attn button:hover {
+  background: var(--band);
+}
+.attn button:hover .id {
+  background: var(--act);
+  color: var(--on-act);
+}
+.calm {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.notes {
+  margin-top: 14px;
+}
+.notes summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
+  cursor: pointer;
+  color: var(--ink-3);
+  font-size: 12px;
+  padding: 4px 0;
+  border-radius: 3px;
+}
+.notes summary::-webkit-details-marker {
+  display: none;
+}
+.notes summary svg {
+  width: 12px;
+  height: 12px;
+  transition: rotate 0.2s var(--ease-out);
+}
+.notes[open] summary svg {
+  rotate: 90deg;
+}
+.notes summary:hover {
+  color: var(--ink);
+}
+.notes ul {
+  margin-top: 8px;
+}
+.notes li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 0;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.notes li + li {
+  border-top: 1px dashed var(--rule-soft);
+}
+.notes li b {
+  color: var(--ink-2);
+}
+.notes li code {
+  color: var(--ink-2);
+}
+
+.prompt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 18px var(--gut) 28px;
+  border-top: 1px solid var(--rule-soft);
+  color: var(--ink-3);
+  font-size: 12.5px;
+  text-wrap: pretty;
+}
+.prompt svg {
+  width: 26px;
+  height: 26px;
+  stroke: var(--ink-3);
+}
+
+/* ---------- selected: head ---------- */
+.head {
+  padding: 22px var(--gut) 20px;
+}
+.head .value {
+  font: 600 52px/1 var(--f-mono);
+  letter-spacing: -0.04em;
+  color: var(--num);
+  font-feature-settings: "tnum", "lnum";
+  overflow-wrap: anywhere;
+}
+.head .label {
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+.head .claim {
+  font: 500 17px/1.5 var(--f-mono);
+  letter-spacing: -0.01em;
+  text-wrap: pretty;
+}
+.head .claim code {
+  color: inherit;
+}
+.head .claim + .label {
+  margin-top: 6px;
+  font-size: 12.5px;
+}
+.head .claim mark {
+  background: none;
+  color: var(--num);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 4px;
+}
+.head-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-top: 14px;
+}
+.head-meta .state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+.head-act {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/* ---------- selected: rests on ---------- */
+.rests {
+  padding: 14px var(--gut) 14px;
+  background: var(--field);
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+.rests .h {
+  margin-bottom: 4px;
+}
+.rests li {
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr) auto;
+  align-items: baseline;
+  column-gap: 12px;
+  padding: 9px 0;
+}
+.rests li + li {
+  border-top: 1px dashed var(--rule);
+}
+.rests li .sw {
+  align-self: center;
+}
+.rests li .what {
+  min-width: 0;
+}
+.rests li .what code {
+  font-weight: 500;
+}
+.rests li .when {
+  color: var(--ink-2);
+  font-size: 12.5px;
+  white-space: nowrap;
+  text-align: right;
+}
+.rests li .when.warn {
+  color: var(--warn);
+}
+.rests li .when.stop {
+  color: var(--stop);
+}
+.rests li[data-jump] {
+  cursor: pointer;
+}
+.rests li[data-jump]:hover .what code {
+  color: var(--act);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.rests .foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+  color: var(--warn);
+  font-size: 12.5px;
+}
+.rests .foot .sw {
+  background: var(--warn);
+}
+
+/* ---------- used by ---------- */
+.uses {
+  padding: 16px var(--gut) 4px;
+}
+.uses .btn svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 1.8;
+}
+.uses-cap {
+  padding: 2px var(--gut) 6px calc(var(--margin) + var(--track) + 10px);
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+/* ---------- the commit graph ---------- */
+.score-h {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 22px var(--gut) 10px;
+}
+.score-h .h {
+  margin: 0;
+}
+.score-h .read {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-3);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.score-h .read svg {
+  width: 11px;
+  height: 11px;
+  stroke-width: 1.6;
+}
+
+.row {
+  --row-bg: var(--paper);
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--margin) var(--track) minmax(0, 1fr);
+  background: var(--row-bg);
+  transition: background-color 0.12s;
+}
+.row:hover,
+.row.parent-band {
+  --row-bg: var(--band-soft);
+}
+.row.is-top,
+.row.band {
+  --row-bg: var(--band);
+}
+.row .n {
+  font: 500 11.5px/1 var(--f-mono);
+  color: var(--ink-3);
+  text-align: right;
+  padding: 18px 6px 0 0;
+}
+
+/* the rail: a 2px line from the first commit to the last */
+.row .st {
+  position: relative;
+}
+.row .st::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--graph);
+}
+.row:first-child .st::before {
+  top: 22px;
+}
+.row:last-child .st::before {
+  bottom: auto;
+  height: 22px;
+}
+.row:only-child .st::before {
+  display: none;
+}
+
+/* commits: solid = traced, amber ring = external, red ring = nothing behind it.
+   The halo is always the row's own ground, so a node cuts the rail cleanly. */
+.blk {
+  position: absolute;
+  top: 16px;
+  left: 9px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--row-bg);
+  box-shadow: 0 0 0 3px var(--row-bg);
+  transition:
+    background-color 0.12s,
+    box-shadow 0.12s;
+}
+.blk.full {
+  background: var(--node);
+}
+.blk.partial {
+  box-shadow:
+    inset 0 0 0 2px var(--warn),
+    0 0 0 3px var(--row-bg);
+}
+.blk.ungrounded {
+  box-shadow:
+    inset 0 0 0 2px var(--stop),
+    0 0 0 3px var(--row-bg);
+}
+.blk.top {
+  top: 14px;
+  left: 7px;
+  width: 16px;
+  height: 16px;
+}
+.blk.top.partial {
+  box-shadow:
+    inset 0 0 0 2.5px var(--warn),
+    0 0 0 3px var(--row-bg);
+}
+.blk.top.ungrounded {
+  box-shadow:
+    inset 0 0 0 2.5px var(--stop),
+    0 0 0 3px var(--row-bg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes pop {
+    from {
+      opacity: 0;
+      scale: 0.2;
+    }
+    to {
+      opacity: 1;
+      scale: 1;
+    }
+  }
+  .score.rise .blk {
+    animation: pop 0.42s var(--ease-out) both;
+    animation-delay: calc(var(--i, 0) * 55ms);
+  }
+}
+
+.step {
+  min-width: 0;
+  padding: 14px var(--gut) 16px 10px;
+}
+.step-h {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.step-h .ttl {
+  flex: 1;
+  min-width: 0;
+  font: 500 13px/1.4 var(--f-mono);
+  text-wrap: pretty;
+}
+.step-h .ttl code {
+  font-weight: 500;
+}
+.step-h .fig {
+  flex: none;
+  margin-left: 8px;
+  font: 600 16px/1 var(--f-mono);
+  color: var(--num);
+  white-space: nowrap;
+}
+.step-h .fig.small {
+  font: 400 12px/1.2 var(--f-mono);
+  color: var(--ink-3);
+}
+.step-h .fig:empty {
+  display: none;
+}
+
+.reads {
+  margin-top: 8px;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.65;
+  text-wrap: pretty;
+}
+.reads code {
+  color: var(--ink);
+}
+.reads b {
+  color: var(--num);
+  font-weight: 600;
+}
+.reads .id {
+  font-size: 12px;
+}
+.reads.cols {
+  margin-top: 4px;
+}
+.reads .stamp {
+  margin-right: 6px;
+  vertical-align: 1px;
+}
+
+.ext-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 10px;
+}
+.ext-body p {
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+/* formula: the expression with ids, then with values, then the result */
+.formula {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  row-gap: 3px;
+  margin-top: 10px;
+  font: 500 14px/1.6 var(--f-mono);
+  font-variant-numeric: tabular-nums;
+}
+.formula .eq {
+  color: var(--ink-3);
+}
+.formula .id {
+  font-size: 11.5px;
+  padding: 0 4px;
+}
+.formula > :nth-last-child(-n + 2) {
+  margin-top: 5px;
+  padding-top: 6px;
+  border-top: 1px solid var(--rule);
+}
+.formula .res {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--num);
+}
+
+/* sql snippet */
+.snip {
+  margin-top: 10px;
+  background: var(--field);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.snip pre {
+  margin: 0;
+  padding: 9px 11px;
+  font: 400 12.5px/1.6 var(--f-mono);
+  color: var(--ink);
+  white-space: pre;
+  overflow-x: auto;
+  tab-size: 2;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule) transparent;
+}
+.snip pre .kw {
+  color: var(--kw);
+  font-weight: 500;
+}
+.snip pre .str {
+  color: var(--str);
+}
+.snip pre .num {
+  color: var(--num);
+}
+.snip pre .cm {
+  color: var(--ink-3);
+  font-style: italic;
+}
+.snip-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px 5px 11px;
+  border-top: 1px dashed var(--rule);
+}
+.snip-bar .muted {
+  font-size: 12px !important;
+}
+.snip-bar .link {
+  font-size: 12px;
+}
+.snip-bar .btn {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11.5px;
+}
+.snip-bar .btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* warnings */
+.warns {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+.warns li {
+  display: flex;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 3px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+.warns li .code {
+  font-weight: 700;
+  flex: none;
+}
+.warns li code,
+.warns li b {
+  color: inherit;
+}
+.warns li.stop {
+  background: var(--stop-wash);
+  color: var(--stop-ink);
+}
+.warns li.warn {
+  background: var(--warn-wash);
+  color: var(--warn-ink);
+}
+.warns li.note {
+  padding: 2px 0;
+  background: none;
+  color: var(--ink-3);
+}
+.warns li.note code {
+  color: var(--ink-2);
+}
+
+/* used-by rows: the same graph, dashed, with hollow grey commits */
+.uses-list {
+  margin-top: 10px;
+}
+.uses-list .row .st::before {
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--graph) 0 3px,
+    transparent 3px 6px
+  );
+}
+.uses-list .row:first-child .st::before {
+  top: 20px;
+}
+.uses-list .row:last-child .st::before {
+  bottom: 0;
+  height: auto;
+}
+.uses-list .blk {
+  top: 15px;
+  background: var(--row-bg);
+  box-shadow:
+    inset 0 0 0 1.5px var(--ink-3),
+    0 0 0 3px var(--row-bg);
+}
+.uses-list .step {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+.uses-list .step-h {
+  align-items: center;
+}
+.uses-list .step-h .ttl {
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.uses-list .row:hover .step-h .ttl {
+  color: var(--ink);
+}
+.tw {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-left: 2px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--act);
+  transition: background-color 0.15s;
+}
+.tw svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 1.8;
+  transition: rotate 0.2s var(--ease-out);
+}
+.tw[aria-expanded="true"] svg {
+  rotate: 180deg;
+}
+.tw:hover {
+  background: var(--act-wash);
+}
+.tw.none {
+  visibility: hidden;
+}
+
+.end {
+  padding: 12px var(--gut) 32px calc(var(--margin) + var(--track) + 10px);
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+.end:empty {
+  padding-bottom: 20px;
+}
+
+/* ---------- toast ---------- */
+.toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 10;
+  padding: 10px 14px;
+  border-radius: 3px;
+  background: var(--ink);
+  color: var(--on-act);
+  font: 500 12px/1.3 var(--f-mono);
+  opacity: 0;
+  translate: 0 12px;
+  pointer-events: none;
+  transition:
+    opacity 0.25s var(--ease-out),
+    translate 0.25s var(--ease-out);
+}
+.toast.on {
+  opacity: 1;
+  translate: 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- narrower screens ---------- */
+@media (max-width: 980px) {
+  :root {
+    --panel-w: 460px;
+  }
+}
+
+@media (max-width: 760px) {
+  :root {
+    --gut: 16px;
+    --margin: 26px;
+  }
+  .app {
+    display: block;
+    height: auto;
+  }
+  .rail {
+    flex-wrap: wrap;
+    row-gap: 0;
+    padding: 8px 12px 0 16px;
+  }
+  .rail .brand {
+    height: 32px;
+  }
+  .rail-report {
+    order: 10;
+    flex-basis: 100%;
+    padding: 6px 0 8px;
+    border-left: 0;
+    font-size: 12px;
+  }
+  .rail-btn span {
+    display: none;
+  }
+  #copyReport {
+    width: 32px;
+    padding: 0;
+  }
+  .panes {
+    display: block;
+  }
+  .report {
+    height: 46vh;
+    height: 46svh;
+  }
+  .lineage {
+    overflow: visible;
+    border-left: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .head .value {
+    font-size: 50px;
+  }
+  .rests li {
+    grid-template-columns: 9px minmax(0, 1fr);
+    row-gap: 2px;
+  }
+  .rests li .when {
+    grid-column: 2;
+    text-align: left;
+    white-space: normal;
+  }
+  .score-h .read {
+    display: none;
+  }
+  .step-h {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+  .step-h .ttl {
+    flex: 1 1 24ch;
+  }
+  .step-h .fig {
+    margin-left: auto;
+  }
+  .toast {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    text-align: center;
+  }
+}
