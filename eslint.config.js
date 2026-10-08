@@ -19,6 +19,21 @@ const nodeGlobals = {
   structuredClone: "readonly",
 };
 
+// Browser globals the viewer page uses (src/viewer/client/viewer.js).
+const browserGlobals = {
+  CSS: "readonly",
+  document: "readonly",
+  fetch: "readonly",
+  history: "readonly",
+  localStorage: "readonly",
+  window: "readonly",
+  location: "readonly",
+  matchMedia: "readonly",
+  navigator: "readonly",
+  setTimeout: "readonly",
+  clearTimeout: "readonly",
+};
+
 export default [
   js.configs.recommended,
   {
@@ -30,6 +45,18 @@ export default [
     },
     rules: {
       "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+    },
+  },
+  {
+    files: ["src/viewer/client/**/*.js"],
+    languageOptions: { globals: browserGlobals },
+  },
+  {
+    // Runs inside the report as a plain script, not a module.
+    files: ["src/viewer/client/bridge.js"],
+    languageOptions: {
+      sourceType: "script",
+      globals: { ...browserGlobals, parent: "readonly" },
     },
   },
   {

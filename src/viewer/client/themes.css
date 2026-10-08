@@ -1,0 +1,69 @@
+/* Console: the two modes of the lineage panel. Only token values live here;
+   viewer.css holds every rule and reads these. The mode follows the OS, with
+   a toggle in the rail (#mode=light|dark). */
+
+/* CONSOLE: a SQL editor at night. */
+[data-theme="console"] {
+  color-scheme: dark;
+  --paper: #121418;
+  --rail-bg: #0a0b0d;
+  --rail-btn-bg: transparent;
+  --field: #0d0f12;
+  --band: #1d2128;
+  --band-soft: #191c22;
+  --rule: #2c3038;
+  --rule-soft: #22262d;
+  --graph: #3b414c;
+  --ink: #dfe2e8;
+  --ink-2: #aab0bb;
+  --ink-3: #868d99;
+  --node: #dfe2e8;
+  --on-act: #0a0b0d;
+  --act: #8fb0ff;
+  --act-ink: #b5caff;
+  --act-wash: #1e2740;
+  --num: #7cc7e0;
+  --kw: #c792ea;
+  --str: #f0c674;
+  --warn: #f0b25a;
+  --warn-ink: #f6cf94;
+  --warn-wash: #2b2216;
+  --stop: #ff7a70;
+  --stop-ink: #ffb4ad;
+  --stop-wash: #2e1a1a;
+  --sel: #2c3a5c;
+  --sel-ink: #ffffff;
+}
+
+/* CONSOLE LIGHT: the same editor in daylight. */
+[data-theme="console-light"] {
+  color-scheme: light;
+  --paper: #fcfcfd;
+  --rail-bg: #f1f3f6;
+  --rail-btn-bg: #ffffff;
+  --field: #f4f6f9;
+  --band: #eef1f6;
+  --band-soft: #f5f7fa;
+  --rule: #d9dde3;
+  --rule-soft: #e9ecf0;
+  --graph: #c3c9d2;
+  --ink: #1f2328;
+  --ink-2: #4b525c;
+  --ink-3: #626a76;
+  --node: #1f2328;
+  --on-act: #ffffff;
+  --act: #2557d6;
+  --act-ink: #1a43ab;
+  --act-wash: #e7eefc;
+  --num: #0a6f96;
+  --kw: #8250df;
+  --str: #9b4f0f;
+  --warn: #9a5f00;
+  --warn-ink: #6b4100;
+  --warn-wash: #fcf3e2;
+  --stop: #c42b2b;
+  --stop-ink: #8f1d1d;
+  --stop-wash: #fcebeb;
+  --sel: #d6e2fb;
+  --sel-ink: #1f2328;
+}

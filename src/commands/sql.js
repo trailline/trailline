@@ -5,7 +5,7 @@ import { TraillineError, UsageError } from "../errors.js";
 import { readGraph, readText } from "../graph/parse.js";
 import { validateGraph } from "../graph/schema.js";
 import { proseSkip, readPage } from "../html/page.js";
-import { composeSql } from "../sql/compose.js";
+import { composeSql, refusal } from "../sql/compose.js";
 
 export const name = "sql";
 export const summary = "Compose the report into one runnable SQL script";
@@ -58,9 +58,7 @@ export async function run(parsed, io) {
   const issues = [...validateGraph(graph), ...checkRules(graph, page)];
   const report = basename(reportPath);
   if (issues.some((issue) => issue.severity === "error")) {
-    throw new TraillineError(
-      `${report} does not pass \`trailline check\`, so no script was composed`,
-    );
+    throw new TraillineError(refusal(report));
   }
   io.out(composeSql(graph, { report, id }));
   return 0;
