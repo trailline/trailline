@@ -13,6 +13,7 @@ import { TraillineError } from "../errors.js";
 import { buildPayload } from "./payload.js";
 
 const CLIENT = fileURLToPath(new URL("./client/", import.meta.url));
+const BRIDGE = readFileSync(join(CLIENT, "bridge.js"), "utf8");
 
 const TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -58,11 +59,26 @@ function readUnder(root, encoded) {
   }
 }
 
-function sendFile(res, root, encoded) {
+/**
+ * The report's HTML with the bridge script inline: right before `</head>`, or
+ * at the end when there is none.
+ */
+function withBridge(html) {
+  const tag = `<script>${BRIDGE}</script>`;
+  if (!/<\/head>/i.test(html)) return html + tag;
+  return html.replace(/<\/head>/i, (head) => `${tag}${head}`);
+}
+
+/** Send a file; with `reportPath`, that file gets the bridge. */
+function sendFile(res, root, encoded, reportPath) {
   const found = readUnder(root, encoded);
   if (found === null) return sendText(res, 404, "not found");
   const type = TYPES[extname(found.file)] ?? "application/octet-stream";
-  send(res, 200, type, found.body);
+  const body =
+    reportPath && found.file === realpathSync(reportPath)
+      ? withBridge(found.body.toString())
+      : found.body;
+  send(res, 200, type, body);
 }
 
 function sendText(res, status, text) {
@@ -121,7 +137,12 @@ export async function startServer({
         sendText(res, 500, error.message);
       }
     } else if (path.startsWith("/report/")) {
-      sendFile(res, dirname(reportPath), path.slice("/report/".length));
+      sendFile(
+        res,
+        dirname(reportPath),
+        path.slice("/report/".length),
+        reportPath,
+      );
     } else if (path.startsWith("/assets/")) {
       sendFile(res, CLIENT, path.slice("/assets/".length));
     } else {

@@ -4,6 +4,25 @@
  * ES module with no imports, so the page and the tests load the same file.
  */
 
+/** True for a plain object: not null, not an array. */
+const isObject = (x) =>
+  typeof x === "object" && x !== null && !Array.isArray(x);
+
+/** A graph's nodes as an object, whatever the graph is. */
+export function nodesOf(graph) {
+  if (!isObject(graph) || !isObject(graph.nodes)) return {};
+  return Object.fromEntries(
+    Object.entries(graph.nodes)
+      .filter(([, node]) => isObject(node))
+      .map(([id, node]) => [
+        id,
+        "from" in node && !Array.isArray(node.from)
+          ? { ...node, from: [] }
+          : node,
+      ]),
+  );
+}
+
 /** The trace state of a node, or "ungrounded" for an id not in the graph. */
 export function nodeState(data, id) {
   if (!data.graph.nodes[id]) return "ungrounded";
@@ -270,4 +289,55 @@ export function chainSql(data, id) {
 /** One step's own SQL. */
 export function stepSql(data, id) {
   return copyable(data, data.graph.nodes[id].sql);
+}
+
+/**
+ * Copy `text`: with the Clipboard API when there is one and it accepts, else
+ * with `execCopy`. Resolves whether the text was copied; never rejects.
+ * @param {string} text
+ * @param {{ clipboard?: { writeText?: (text: string) => Promise<void> }, execCopy: (text: string) => boolean }} how
+ * @returns {Promise<boolean>}
+ */
+export async function copyText(text, { clipboard, execCopy }) {
+  try {
+    await clipboard.writeText(text);
+    return true;
+  } catch {
+    // Also reached when there is no clipboard to call.
+    try {
+      return execCopy(text);
+    } catch {
+      return false;
+    }
+  }
+}
+
+/**
+ * What a message from the report frame asks the panel to do. A report's own
+ * scripts can post anything, so only what a click or a key could do gets
+ * through.
+ * @returns {{ type: "select", id: string } | { type: "back" } | { type: "ready", counts: object } | null}
+ */
+export function fromReport(data, message) {
+  if (!isObject(message)) return null;
+  if (message.trailline === "back") return { type: "back" };
+  if (message.trailline === "select") {
+    const { id } = message;
+    const known =
+      typeof id === "string" && Object.hasOwn(nodesOf(data.graph), id);
+    return known ? { type: "select", id } : null;
+  }
+  if (message.trailline === "ready") {
+    const nodes = nodesOf(data.graph);
+    const counts = isObject(message.counts) ? message.counts : {};
+    return {
+      type: "ready",
+      counts: Object.fromEntries(
+        Object.entries(counts).filter(
+          ([id, n]) => Object.hasOwn(nodes, id) && Number.isInteger(n) && n > 0,
+        ),
+      ),
+    };
+  }
+  return null;
 }

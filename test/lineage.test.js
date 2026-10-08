@@ -1,8 +1,17 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { buildPayload } from "../src/viewer/payload.js";
-import { CLEAN_F3_SQL, CLEAN_SQL, loadFixture, runCli } from "./helpers.js";
+import {
+  CLEAN_F3_SQL,
+  CLEAN_SQL,
+  loadFixture,
+  runCli,
+  tempDir,
+} from "./helpers.js";
 
 import {
   nodeState,
@@ -15,6 +24,9 @@ import {
   reportSql,
   chainSql,
   stepSql,
+  nodesOf,
+  copyText,
+  fromReport,
 } from "../src/viewer/client/lineage.js";
 
 const G = {
@@ -159,6 +171,160 @@ const issue = (code, node, message, severity = "warning") => ({
 });
 const C7_MESSY =
   "sql source is missing `columns`; SQL does not contain the period as literal dates: '2026-08-01', '2026-08-31'; SQL uses date functions: current_date";
+
+describe("nodesOf", () => {
+  it("gives a graph's nodes as they are", () => {
+    assert.deepEqual(nodesOf(G), G.nodes);
+  });
+  it("gives no nodes for a graph that is not an object", () => {
+    for (const graph of [null, "x", 5, []]) {
+      assert.deepEqual(nodesOf(graph), {});
+    }
+  });
+  it("gives no nodes when nodes is missing or not an object", () => {
+    for (const nodes of [undefined, 5, [], null]) {
+      assert.deepEqual(nodesOf({ trailline: "1.0", nodes }), {});
+    }
+  });
+  it("leaves out nodes that are not objects", () => {
+    assert.deepEqual(
+      nodesOf({ nodes: { q1: G.nodes.q1, a: null, b: "x", c: [] } }),
+      { q1: G.nodes.q1 },
+    );
+  });
+  it("gives a from that is not a list no parents", () => {
+    const f1 = { step: "figure", from: "q1" };
+    assert.deepEqual(nodesOf({ nodes: { q1: G.nodes.q1, f1 } }), {
+      q1: G.nodes.q1,
+      f1: { step: "figure", from: [] },
+    });
+    assert.equal(f1.from, "q1");
+  });
+});
+
+describe("copyText", () => {
+  // A fake execCopy that records what it was asked to copy.
+  const fallback = (result) => {
+    const calls = [];
+    const execCopy = (text) => {
+      calls.push(text);
+      if (result instanceof Error) throw result;
+      return result;
+    };
+    return { calls, execCopy };
+  };
+  const refuses = { writeText: async () => Promise.reject(new Error("no")) };
+  it("is true when the clipboard takes the text", async () => {
+    const { calls, execCopy } = fallback(false);
+    const clipboard = { writeText: async () => {} };
+    assert.equal(await copyText("select 1", { clipboard, execCopy }), true);
+    assert.deepEqual(calls, []);
+  });
+  it("is false when the clipboard and the fallback both fail", async () => {
+    const { execCopy } = fallback(false);
+    assert.equal(
+      await copyText("select 1", { clipboard: refuses, execCopy }),
+      false,
+    );
+  });
+  it("falls back when the clipboard refuses", async () => {
+    const { calls, execCopy } = fallback(true);
+    assert.equal(
+      await copyText("select 1", { clipboard: refuses, execCopy }),
+      true,
+    );
+    assert.deepEqual(calls, ["select 1"]);
+  });
+  it("falls back when there is no clipboard", async () => {
+    for (const clipboard of [undefined, {}]) {
+      const { execCopy } = fallback(true);
+      assert.equal(await copyText("select 1", { clipboard, execCopy }), true);
+    }
+  });
+  it("is false when the fallback throws", async () => {
+    const { execCopy } = fallback(new Error("blocked"));
+    assert.equal(
+      await copyText("select 1", { clipboard: undefined, execCopy }),
+      false,
+    );
+  });
+});
+
+describe("fromReport", () => {
+  const d = data();
+  it("ignores anything that is not a bridge message", () => {
+    for (const m of [
+      null,
+      "select",
+      5,
+      {},
+      { type: "select", id: "f1" },
+      { trailline: "paint" },
+    ]) {
+      assert.equal(fromReport(d, m), null, JSON.stringify(m));
+    }
+  });
+  it("reads a click on a bound element", () => {
+    assert.deepEqual(fromReport(d, { trailline: "select", id: "f1" }), {
+      type: "select",
+      id: "f1",
+    });
+  });
+  it("ignores a select for an id not in the graph", () => {
+    for (const id of [
+      "nope",
+      "constructor",
+      "__proto__",
+      "toString",
+      5,
+      ["f1"],
+    ]) {
+      assert.equal(
+        fromReport(d, { trailline: "select", id }),
+        null,
+        String(id),
+      );
+    }
+  });
+  it("ignores a select when the graph has no nodes", () => {
+    const m = { trailline: "select", id: "f1" };
+    assert.equal(fromReport({ ...d, graph: null }, m), null);
+    assert.equal(fromReport({ ...d, graph: { nodes: 5 } }, m), null);
+  });
+  it("reads Escape in the report as back", () => {
+    assert.deepEqual(fromReport(d, { trailline: "back" }), { type: "back" });
+  });
+  it("reads how many places each node has on the page", () => {
+    const counts = { f1: 2, v1: 1 };
+    assert.deepEqual(fromReport(d, { trailline: "ready", counts }), {
+      type: "ready",
+      counts,
+    });
+  });
+  it("keeps only counts of known nodes that are whole and positive", () => {
+    const counts = {
+      f1: 2,
+      nope: 1,
+      constructor: 1,
+      f3: "2",
+      v1: 0,
+      i1: 1.5,
+      q1: -1,
+    };
+    assert.deepEqual(fromReport(d, { trailline: "ready", counts }), {
+      type: "ready",
+      counts: { f1: 2 },
+    });
+  });
+  it("reads ready with no usable counts as none", () => {
+    for (const counts of [undefined, null, 5, []]) {
+      assert.deepEqual(fromReport(d, { trailline: "ready", counts }), {
+        type: "ready",
+        counts: {},
+      });
+    }
+  });
+});
 
 describe("nodeState", () => {
   it("gives the node's trace state", () => {
@@ -707,6 +873,62 @@ describe("lineage: fixtures", () => {
     for (const [id, node] of Object.entries(d.graph.nodes)) {
       assert.deepEqual(chainSql(d, id), off, id);
       if (node.sql) assert.deepEqual(stepSql(d, id), off, id);
+    }
+  });
+  it("lists S1 for a graph the page cannot read", (t) => {
+    const dir = tempDir(t);
+    for (const text of [
+      "null",
+      "[]",
+      '"x"',
+      '{"trailline":"1.0"}',
+      '{"trailline":"1.0","nodes":5}',
+      '{"trailline":"1.0","nodes":[]}',
+    ]) {
+      const graphPath = join(dir, "g.json");
+      writeFileSync(graphPath, text);
+      const d = buildPayload({
+        reportPath: loadFixture("clean").reportPath,
+        graphPath,
+      });
+      assert.deepEqual(nodesOf(d.graph), {}, text);
+      assert.deepEqual(
+        needsAttention(d.summary).items.map((i) => i.tag),
+        ["S1 · Error"],
+        text,
+      );
+      assert.equal(
+        overview(d).lede,
+        "This report does not pass check: 1 error.",
+        text,
+      );
+      assert.equal(reportSql(d).sql, null, text);
+    }
+  });
+  it("gives every fixture's nodes through nodesOf", () => {
+    for (const name of ["clean", "messy", "broken"]) {
+      const d = fx(name);
+      assert.deepEqual(
+        Object.keys(nodesOf(d.graph)),
+        Object.keys(d.graph.nodes).filter(
+          (id) => d.graph.nodes[id] && typeof d.graph.nodes[id] === "object",
+        ),
+        name,
+      );
+    }
+  });
+  it("selects every bound id on clean", () => {
+    const d = fx("clean");
+    const ids = [...d.html.matchAll(/data-trailline="([^"]*)"/g)].map(
+      (m) => m[1],
+    );
+    assert.ok(ids.length > 0);
+    for (const id of ids) {
+      assert.deepEqual(
+        fromReport(d, { trailline: "select", id }),
+        { type: "select", id },
+        id,
+      );
     }
   });
   it("lays out broken's cycle without hanging", () => {

@@ -4,9 +4,12 @@
 import {
   beats,
   chainSql,
+  copyText,
+  fromReport,
   highlightSql,
   needsAttention,
   nodeState,
+  nodesOf,
   overview,
   reportSql,
   reviewerWording,
@@ -47,19 +50,13 @@ const S = {
   openSnips: new Set(),
   showUses: false,
   upOpen: new Set(),
-  pageEl: null,
+  counts: {},
   cycle: {},
 };
 
 function load(fx) {
   S.fx = fx;
-  // Nodes that failed check's S4 (not an object, `from` not a list) stay
-  // readable: the former are absent, the latter have no parents.
-  S.nodes = Object.fromEntries(
-    Object.entries(fx.graph.nodes)
-      .filter(([, n]) => n && typeof n === "object")
-      .map(([id, n]) => [id, Array.isArray(n.from) ? n : { ...n, from: [] }]),
-  );
+  S.nodes = nodesOf(fx.graph);
   S.issues = {};
   for (const i of fx.summary.issues || []) (S.issues[i.node] ||= []).push(i);
   S.usedBy = {};
@@ -175,10 +172,8 @@ function fig(id) {
   return "";
 }
 
-const pageCount = (id) =>
-  S.doc
-    ? S.doc.querySelectorAll(`[data-trailline="${CSS.escape(id)}"]`).length
-    : 0;
+// How many places a node has on the page, as the report said when it loaded.
+const pageCount = (id) => S.counts[id] || 0;
 
 // What the step reads and does, in one or two lines, then its evidence.
 function body(id, isTop) {
@@ -313,7 +308,7 @@ function renderSummary() {
   const { items: att, notes } = needsAttention(sum);
 
   const attHtml = att.length
-    ? `<ul class="attn">${att.map((a) => `<li><button type="button" data-go="${esc(a.node)}" data-from-summary><span class="sw ${a.swatch}"></span><span class="id">${esc(a.node)}</span><span class="what"><span class="tag ${a.tone}">${esc(a.tag)}.</span> ${a.html}</span></button></li>`).join("")}</ul>`
+    ? `<ul class="attn">${att.map((a) => (a.node === null ? `<li><div class="plain"><span class="sw ${a.swatch}"></span><span class="what"><span class="tag ${a.tone}">${esc(a.tag)}.</span> ${a.html}</span></div></li>` : `<li><button type="button" data-go="${esc(a.node)}" data-from-summary><span class="sw ${a.swatch}"></span><span class="id">${esc(a.node)}</span><span class="what"><span class="tag ${a.tone}">${esc(a.tag)}.</span> ${a.html}</span></button></li>`)).join("")}</ul>`
     : `<p class="calm">${sw("full")}<span>Nothing needs attention. Every number and claim traces back to a SQL source, and <code>check</code> raised no warnings.</span></p>`;
   const notesHtml = notes.length
     ? `<details class="notes"><summary>${ICON.chev}${notes.length} note${notes.length > 1 ? "s" : ""} for the builder</summary><ul>${notes.map((i) => `<li>${idBtn(i.node)}<span><b>${esc(i.code)}</b> ${codeify(i.message)}</span></li>`).join("")}</ul></details>`
@@ -494,97 +489,40 @@ function render({ rise = false, keepScroll = false } = {}) {
 }
 
 // ---------- the report pane ----------
-const PAGE_CSS = `
-    [data-trailline] { cursor: pointer; transition: outline-color .15s, background-color .15s; outline: 1.5px solid transparent; outline-offset: 2px; border-radius: 2px; }
-    .tl-hover { outline-color: rgba(35, 70, 176, .45) !important; }
-    .tl-peek { outline: 1.5px dashed #111 !important; }
-    .tl-sel { outline: 2px solid #2346b0 !important; background-color: rgba(35, 70, 176, .07) !important; }
-    @keyframes tl-flash { 0% { background-color: rgba(35,70,176,.28); } 100% { background-color: rgba(35,70,176,.07); } }
-    .tl-flash { animation: tl-flash .9s ease-out; }
-  `;
+// The report runs in a sandboxed frame; the panel and the bridge script the
+// server adds to it talk only through messages.
+const tell = (message) =>
+  $("#report").contentWindow?.postMessage(
+    { trailline: message.type, ...message },
+    "*",
+  );
 
 function mountReport() {
-  const frame = $("#report");
-  frame.onload = () => {
-    const doc = frame.contentDocument;
-    S.doc = doc;
-    const style = doc.createElement("style");
-    style.textContent = PAGE_CSS;
-    doc.head.appendChild(style);
-    doc.addEventListener("click", (e) => {
-      const el = e.target.closest("[data-trailline]");
-      if (!el) return;
-      e.preventDefault();
-      S.pageEl = el;
-      select(el.getAttribute("data-trailline"), { fromPage: true });
-    });
-    doc.addEventListener("mouseover", (e) => {
-      doc
-        .querySelectorAll(".tl-hover")
-        .forEach((x) => x.classList.remove("tl-hover"));
-      e.target.closest?.("[data-trailline]")?.classList.add("tl-hover");
-    });
-    doc.addEventListener("mouseleave", () =>
-      doc
-        .querySelectorAll(".tl-hover")
-        .forEach((x) => x.classList.remove("tl-hover")),
-    );
-    doc.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") back();
-    });
-    onReady();
-  };
-  frame.src = `/report/${encodeURIComponent(S.fx.report)}`;
+  window.addEventListener("message", (e) => {
+    if (e.source !== $("#report").contentWindow) return;
+    const message = fromReport(S.fx, e.data);
+    if (message === null) return;
+    if (message.type === "select") select(message.id, { fromPage: true });
+    else if (message.type === "back") back();
+    else onPageReady(message.counts);
+  });
+  $("#report").src = `/report/${encodeURIComponent(S.fx.report)}`;
 }
 
 function paintPage() {
-  const doc = S.doc;
-  if (!doc) return;
-  doc.querySelectorAll(".tl-sel").forEach((x) => x.classList.remove("tl-sel"));
-  if (!S.sel) return;
-  let el =
-    S.pageEl &&
-    S.pageEl.getAttribute("data-trailline") === S.sel &&
-    S.pageEl.isConnected
-      ? S.pageEl
-      : null;
-  if (!el) el = doc.querySelector(`[data-trailline="${CSS.escape(S.sel)}"]`);
-  if (el) el.classList.add("tl-sel");
-  S.pageEl = el;
+  tell({ type: "mark", id: S.sel });
 }
 
 function scrollPage(id) {
-  const all = [
-    ...S.doc.querySelectorAll(`[data-trailline="${CSS.escape(id)}"]`),
-  ];
-  if (!all.length) return;
-  const k = (S.cycle[id] = ((S.cycle[id] ?? -1) + 1) % all.length);
-  const el = all[k];
-  el.scrollIntoView({
-    behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
-      ? "auto"
-      : "smooth",
-    block: "center",
-  });
-  el.classList.remove("tl-flash");
-  void el.offsetWidth;
-  el.classList.add("tl-flash");
-  if (id === S.sel) {
-    S.pageEl = el;
-    paintPage();
-  }
-  if (all.length > 1) toast(`${k + 1} of ${all.length} places on the page`);
+  const n = pageCount(id);
+  if (!n) return;
+  const k = (S.cycle[id] = ((S.cycle[id] ?? -1) + 1) % n);
+  tell({ type: "scroll", id, index: k });
+  if (n > 1) toast(`${k + 1} of ${n} places on the page`);
 }
 
 function peek(id, on) {
-  if (!S.doc) return;
-  S.doc
-    .querySelectorAll(".tl-peek")
-    .forEach((x) => x.classList.remove("tl-peek"));
-  if (on && id !== S.sel)
-    S.doc
-      .querySelectorAll(`[data-trailline="${CSS.escape(id)}"]`)
-      .forEach((x) => x.classList.add("tl-peek"));
+  tell({ type: "peek", id: on && id !== S.sel ? id : null });
 }
 
 // ---------- actions ----------
@@ -595,7 +533,6 @@ function select(id, { fromPage = false, push = true } = {}) {
   S.sel = id;
   S.showUses = false;
   S.upOpen = new Set();
-  if (!fromPage) S.pageEl = null;
   render({ rise: true });
   if (!fromPage && pageCount(id)) {
     S.cycle[id] = -1;
@@ -607,7 +544,6 @@ function back() {
   const prev = S.history.pop();
   if (prev) {
     S.sel = prev;
-    S.pageEl = null;
     S.showUses = false;
     render({ rise: true });
     if (pageCount(prev)) {
@@ -619,41 +555,38 @@ function back() {
 function home() {
   S.sel = null;
   S.history = [];
-  S.pageEl = null;
   render();
 }
 
-function copy(text, btn) {
-  const done = () => {
-    if (btn) {
-      const old = btn.innerHTML;
-      btn.classList.add("done");
-      btn.innerHTML = btn.innerHTML.replace(/Copy[^<]*/, "Copied");
-      setTimeout(() => {
-        btn.classList.remove("done");
-        btn.innerHTML = old;
-      }, 1400);
-    }
-    toast("Copied to the clipboard");
-  };
-  const fallback = () => {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    try {
-      document.execCommand("copy");
-    } catch {
-      /* ignore */
-    }
+// The old way to copy, for when the Clipboard API is missing or refuses.
+function execCopy(text) {
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    return document.execCommand("copy");
+  } finally {
     ta.remove();
-    done();
-  };
-  if (navigator.clipboard?.writeText)
-    navigator.clipboard.writeText(text).then(done, fallback);
-  else fallback();
+  }
+}
+
+async function copy(text, btn) {
+  if (!(await copyText(text, { clipboard: navigator.clipboard, execCopy }))) {
+    return toast("Could not copy to the clipboard");
+  }
+  if (btn) {
+    const old = btn.innerHTML;
+    btn.classList.add("done");
+    btn.innerHTML = btn.innerHTML.replace(/Copy[^<]*/, "Copied");
+    setTimeout(() => {
+      btn.classList.remove("done");
+      btn.innerHTML = old;
+    }, 1400);
+  }
+  toast("Copied to the clipboard");
 }
 
 let toastT;
@@ -757,11 +690,13 @@ function writeHash() {
   history.replaceState(null, "", `#${p}`);
 }
 let ready = null;
-function onReady() {
-  if (!ready) return;
+// The report has loaded: now the panel knows where each node is on the page.
+function onPageReady(counts) {
+  S.counts = counts;
   const r = ready;
   ready = null;
-  if (r.sel && S.nodes[r.sel]) select(r.sel, { push: false });
+  if (r?.sel && S.nodes[r.sel]) select(r.sel, { push: false });
+  else render({ keepScroll: true });
 }
 
 async function boot() {
@@ -777,7 +712,6 @@ async function boot() {
   const btn = $("#copyReport");
   btn.disabled = all.sql === null;
   btn.title = all.reason ?? "";
-  S.doc = null;
   render();
   mountReport();
 }

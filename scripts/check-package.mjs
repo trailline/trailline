@@ -38,6 +38,7 @@ const REQUIRED = [
   "src/viewer/client/index.html",
   "src/viewer/client/viewer.js",
   "src/viewer/client/lineage.js",
+  "src/viewer/client/bridge.js",
   "src/viewer/client/viewer.css",
   "src/viewer/client/themes.css",
   "src/viewer/client/fonts/JetBrainsMono-Regular.woff2",

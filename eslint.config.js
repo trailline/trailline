@@ -26,6 +26,7 @@ const browserGlobals = {
   fetch: "readonly",
   history: "readonly",
   localStorage: "readonly",
+  window: "readonly",
   location: "readonly",
   matchMedia: "readonly",
   navigator: "readonly",
@@ -49,6 +50,14 @@ export default [
   {
     files: ["src/viewer/client/**/*.js"],
     languageOptions: { globals: browserGlobals },
+  },
+  {
+    // Runs inside the report as a plain script, not a module.
+    files: ["src/viewer/client/bridge.js"],
+    languageOptions: {
+      sourceType: "script",
+      globals: { ...browserGlobals, parent: "readonly" },
+    },
   },
   {
     ignores: ["node_modules/", "docs/", ".claude/"],

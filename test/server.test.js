@@ -40,6 +40,8 @@ const G1 = {
     },
   },
 };
+const BRIDGE = readFileSync(join(CLIENT, "bridge.js"), "utf8");
+const TAG = `<script>${BRIDGE}</script>`;
 const R_F1 =
   '<html><head></head><body><p>Sales were <span data-trailline="f1">12</span>.</p></body></html>';
 
@@ -148,13 +150,68 @@ describe("startServer", () => {
     assert.deepEqual(res.body, readFileSync(join(CLIENT, "index.html")));
   });
 
-  it("serves the report at /report/<name>, as read", async (t) => {
+  it("adds the bridge to the report it serves, before </head>", async (t) => {
     const { path } = report(t, R_F1, G1);
     const s = await serve(t, { reportPath: path });
     const res = await get(s, "/report/r.html");
     assert.equal(res.status, 200);
     assert.equal(res.headers["content-type"], "text/html; charset=utf-8");
+    assert.equal(
+      res.body.toString(),
+      R_F1.replace("</head>", () => `${TAG}</head>`),
+    );
+  });
+
+  it("finds </head> in any case", async (t) => {
+    const html =
+      '<HTML><HEAD></HEAD><BODY><p data-trailline="f1">12</p></BODY></HTML>';
+    const { path } = report(t, html, G1);
+    const s = await serve(t, { reportPath: path });
+    const res = await get(s, "/report/r.html");
+    assert.equal(
+      res.body.toString(),
+      html.replace("</HEAD>", () => `${TAG}</HEAD>`),
+    );
+  });
+
+  it("adds the bridge at the end of a report with no </head>", async (t) => {
+    const html = '<p>Sales were <span data-trailline="f1">12</span>.</p>';
+    const { path } = report(t, html, G1);
+    const s = await serve(t, { reportPath: path });
+    const res = await get(s, "/report/r.html");
+    assert.equal(res.body.toString(), html + TAG);
+  });
+
+  it("serves other html beside the report as it is", async (t) => {
+    const { dir, path } = report(t, R_F1, G1);
+    writeFileSync(join(dir, "other.html"), R_F1);
+    const s = await serve(t, { reportPath: path });
+    const res = await get(s, "/report/other.html");
     assert.equal(res.body.toString(), R_F1);
+  });
+
+  it("leaves the report file on disk unchanged", async (t) => {
+    const { path } = report(t, R_F1, G1);
+    const before = readFileSync(path);
+    const s = await serve(t, { reportPath: path });
+    await get(s, "/report/r.html");
+    assert.deepEqual(readFileSync(path), before);
+  });
+
+  it("never lets another origin read the data or the report", async (t) => {
+    const { path } = report(t, R_F1, G1);
+    const s = await serve(t, { reportPath: path });
+    for (const url of ["/data.json", "/report/r.html"]) {
+      const res = await get(s, url, { Origin: "null" });
+      assert.equal(res.headers["access-control-allow-origin"], undefined, url);
+    }
+  });
+
+  it("answers 404 for a report that has gone", async (t) => {
+    const { path } = report(t, R_F1, G1);
+    const s = await serve(t, { reportPath: path });
+    rmSync(path);
+    assert.equal((await get(s, "/report/r.html")).status, 404);
   });
 
   it("marks the page, data and report no-store", async (t) => {
@@ -213,7 +270,10 @@ describe("startServer", () => {
     const s = await serve(t, { reportPath: path });
     const res = await get(s, "/report/my%20report.html");
     assert.equal(res.status, 200);
-    assert.equal(res.body.toString(), R_F1);
+    assert.equal(
+      res.body.toString(),
+      R_F1.replace("</head>", () => `${TAG}</head>`),
+    );
   });
 
   it("serves the bundled font under /assets/", async (t) => {
@@ -322,7 +382,10 @@ describe("startServer", () => {
       const s = await serve(t, { reportPath: join(via, "r.html") });
       const res = await get(s, "/report/r.html");
       assert.equal(res.status, 200);
-      assert.equal(res.body.toString(), R_F1);
+      assert.equal(
+        res.body.toString(),
+        R_F1.replace("</head>", () => `${TAG}</head>`),
+      );
     },
   );
 

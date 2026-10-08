@@ -106,6 +106,24 @@ function view(t, argv, { open } = {}) {
 const USAGE = (message) =>
   `trailline: ${message}\nTry \`trailline view --help\`.`;
 
+describe("view: help", () => {
+  it("says what leaves the machine and what does not", async () => {
+    const { code, out } = await runCli(["view", "--help"]);
+    assert.equal(code, 0);
+    assert.ok(
+      out.includes(
+        [
+          "Serves a two-pane page on localhost: the report on the left, the lineage of",
+          "whatever you click on the right. Reads the report and its graph, nothing",
+          "else. No database, no credentials. The viewer itself makes no request off",
+          "this machine; the report loads what it would load in any browser.",
+        ].join("\n"),
+      ),
+    );
+    assert.doesNotMatch(out, /no network/i);
+  });
+});
+
 describe("view: invocation", () => {
   it("exits 2 when no report is given", async () => {
     const { code, out, err } = await runCli(["view"]);
@@ -277,7 +295,18 @@ describe("view: fixtures", () => {
       const served = await fetchUrl(
         `${url}report/${encodeURIComponent(expected.report)}`,
       );
-      assert.deepEqual(served.body, readFileSync(reportPath), name);
+      const bridge = readFileSync(
+        new URL("../src/viewer/client/bridge.js", import.meta.url),
+        "utf8",
+      );
+      assert.equal(
+        served.body.toString(),
+        readFileSync(reportPath, "utf8").replace(
+          "</head>",
+          () => `<script>${bridge}</script></head>`,
+        ),
+        name,
+      );
       assert.equal(await stop(), 0, name);
       assert.deepEqual(
         files.map((file) => readFileSync(file)),

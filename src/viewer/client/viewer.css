@@ -594,6 +594,13 @@ button.id:hover {
   line-height: 1.6;
   transition: background-color 0.12s;
 }
+.attn .plain {
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr);
+  column-gap: 12px;
+  padding: 12px var(--gut);
+  line-height: 1.6;
+}
 .attn .sw {
   margin-top: 6px;
 }

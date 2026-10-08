@@ -79,6 +79,31 @@ describe("panel files", () => {
       "/assets/fonts/JetBrainsMono-SemiBold.woff2",
     ]);
   });
+  it("sandboxes the report frame", () => {
+    const frame = /<iframe\b[^>]*\bid="report"[^>]*>/.exec(read("index.html"));
+    assert.ok(frame);
+    const sandbox = /\bsandbox="([^"]*)"/.exec(frame[0]);
+    assert.ok(sandbox);
+    assert.equal(sandbox[1], "allow-scripts allow-popups");
+  });
+  it("does not reach into the report frame", () => {
+    assert.doesNotMatch(
+      read("viewer.js"),
+      /contentDocument|contentWindow\.document/,
+    );
+  });
+  it("keeps the bridge a plain script that can sit inline", () => {
+    const bridge = read("bridge.js");
+    assert.ok(bridge.trim().length > 0);
+    assert.doesNotMatch(bridge, /^\s*(import|export)\b/m);
+    assert.doesNotMatch(bridge, /<\/script/i);
+  });
+  it("serves the bridge with the other assets", async (t) => {
+    const s = await serve(t, { reportPath });
+    const res = await get(s, "/assets/bridge.js");
+    assert.equal(res.status, 200);
+    assert.equal(res.headers["content-type"], "text/javascript; charset=utf-8");
+  });
   it("points nowhere off the machine", () => {
     const files = readdirSync(CLIENT).filter((name) =>
       /\.(html|js|css)$/.test(name),

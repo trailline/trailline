@@ -12,8 +12,9 @@ export const summary = "Serve the report beside its lineage";
 export const usage = `trailline view <report.html> [options]
 
 Serves a two-pane page on localhost: the report on the left, the lineage of
-whatever you click on the right. Reads the file and nothing else. No
-database, no credentials, no network.
+whatever you click on the right. Reads the report and its graph, nothing
+else. No database, no credentials. The viewer itself makes no request off
+this machine; the report loads what it would load in any browser.
 
 Options
   --port <number>  Port to serve on (default: the first free port from 7171)
